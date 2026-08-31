@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Project 0 | Perspective & Zoom</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="hero">
+        <div class="eyebrow">CS 180 • Project 0</div>
+        <h1>Perspective, Focal Length, and the Center of Projection</h1>
+        <p class="lede">
+          In this class, we want you to become friends with every pixel. The first step toward this goal is to become friends with your camera—e.g., the one in your smartphone. In particular, the goal of this project is to get you some intuitive understanding of the somewhat subtle relationship between perspective, focal length/zoom, and the center of projection.
+        </p>
+      </header>
+
+      <section class="content">
+        <article class="panel">
+          <h2>Part 1: (Selfie) The Wrong Way vs. The Right Way</h2>
+          <p>
+            Take a picture of your friend (or yourself) from close up. You get a typical distorted selfie image. Now step back several feet from your subject, zoom in, and take a second picture. Try to get the face in the second photo to be the same size as in the first photo. If you've done things right, the second portrait should look much better than the first one.
+          </p>
+          <div class="image-row">
+            <div class="media-card photo-1"><span>Close up</span></div>
+            <div class="media-card photo-2"><span>Zoomed</span></div>
+          </div>
+          <div class="notes">
+            I moved farther away and zoomed in, so his face stayed about the same size but the
+            background changed a lot. This made the picture look more normal because I was not so
+            close that the face got stretched and weird.
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Part 2: Architectural Perspective Compression</h2>
+          <p>
+            Let's repeat the same procedure in reverse, for an urban scene. Pick an empty field with a nice building facade in the background (not totally frontal). Zoom in, and take a photo of the building. Now, walk toward the building, and take a second photo, now without zoom, such that the building in the two photos appears approximately the same size. The first picture should look flattened, or compressed, compared to the second.
+          </p>
+          <div class="image-row">
+            <div class="media-card photo-3"><span>Flattened</span></div>
+            <div class="media-card photo-4"><span>Closer View</span></div>
+          </div>
+          <div class="notes">
+            I zoomed in from farther away, which is basically like taking the photo from close up and
+            then cropping it. Because I was still farther back, the building looked flatter and less
+            deep. When I walked closer without zooming, the scene looked more stretched out and had
+            more depth in front of it.
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Part 3: The Dolly Zoom</h2>
+          <p>
+            This classic effect is a simultaneous move backward while zooming in. Choose a scene,
+            take a series of stills as you move back and zoom in, and keep the central subject
+            roughly the same size. Combine the stills into an animated GIF to create a dolly zoom.
+          </p>
+          <div class="gif-row single-gif">
+            <div class="media-card photo-5"><span>Dolly Zoom</span></div>
+          </div>
+          <div class="notes">
+            I moved backward while zooming in, so the main object stayed about the same size. At the
+            same time, the background changed a lot, which made the scene feel like it was getting
+            bigger or more dramatic while the subject stayed in place.
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
