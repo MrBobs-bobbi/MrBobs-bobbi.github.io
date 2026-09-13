@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restoring the Russian Empire: My Journey with Prokudin Gorskii</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        :root {
+            --bg-color: #09090b; 
+            --surface: #18181b; 
+            --surface-hover: #27272a; 
+            --border-color: #27272a;
+            --text-main: #e4e4e7; 
+            --text-muted: #a1a1aa; 
+            --accent-color: #38bdf8; 
+            --accent-gradient: linear-gradient(135deg, #38bdf8, #818cf8);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.7;
+            color: var(--text-main);
+            background-color: var(--bg-color);
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        h1, h2, h3 {
+            color: #ffffff;
+            line-height: 1.3;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        h1 { 
+            font-size: 2.8rem; 
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        h2 { font-size: 1.8rem; margin-top: 3.5rem; color: var(--accent-color); }
+        h3 { font-size: 1.4rem; margin-top: 2.5rem; color: #f4f4f5; }
+
+        p { margin-bottom: 1.2rem; color: var(--text-muted); }
+        strong { color: #ffffff; }
+
+        .callout {
+            background-color: var(--surface);
+            border-left: 4px solid var(--accent-color);
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+            border-radius: 0 12px 12px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 2rem 0;
+            background: var(--surface);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        th, td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td { color: var(--text-muted); font-size: 0.95rem; }
+        
+        th {
+            background-color: var(--surface-hover);
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        ul { padding-left: 1.5rem; margin-bottom: 1.5rem; color: var(--text-muted); }
+        li { margin-bottom: 0.7rem; }
+
+        code {
+            background: var(--surface-hover);
+            color: var(--accent-color);
+            padding: 0.2rem 0.4rem;
+            border-radius: 6px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.9em;
+        }
+
+        .image-placeholder {
+            background-color: var(--bg-color);
+            border: 1px dashed var(--border-color);
+            color: var(--text-muted);
+            padding: 2rem;
+            text-align: center;
+            font-family: ui-monospace, monospace;
+            font-size: 0.85rem;
+            margin: 1.5rem 0;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .image-placeholder img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 520px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .side-by-side {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .gallery-item {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            border-color: var(--text-muted);
+        }
+
+        .gallery-item strong {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: block;
+            color: #ffffff;
+        }
+
+        .gallery-item .image-placeholder {
+            min-height: 180px;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .coords {
+            font-family: ui-monospace, monospace;
+            font-size: 0.85rem;
+            color: var(--accent-color);
+            background: var(--surface-hover);
+            padding: 0.75rem;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        @media print {
+            body { background: white; color: black; max-width: 100%; padding: 0; }
+            h1, h2, h3, strong { color: black; -webkit-text-fill-color: black; }
+            p, li, td { color: #333; }
+            .callout { border-left-color: #222; background: #f5f5f5; box-shadow: none; }
+            .gallery-item, table { border: 1px solid #ddd; background: white; }
+            .gallery { page-break-inside: avoid; }
+            .image-placeholder { background: #fafafa; border-color: #ccc; }
+            code, .coords { background: #f5f5f5; color: black; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Restoring the Russian Empire: My Journey with Prokudin Gorskii</h1>
+
+    <p>In the early 1900s, Sergei Mikhailovich Prokudin Gorskii traveled across Russia capturing three simultaneous black and white photographs through red, green, and blue filters. My goal for this project was to take these digitized glass plate negatives, extract the three color channels, and algorithmically stack them to resurrect the original colored scenes.</p>
+
+    <div class="callout">
+        <strong>Image naming convention:</strong> every output begins with <code>out_</code>, followed by the image name and a method suffix. <code>_l2</code> is single-scale L2, <code>_ncc</code> is single-scale NCC, <code>_pyramid_l2</code> is pyramid L2, <code>_pyramid_ncc</code> is pyramid NCC, and <code>_edges_ncc</code> is Sobel edge alignment with NCC. The page uses the exact filenames available in <code>media/</code>.
+    </div>
+
+    <h2>The Baseline: Single Scale Alignment</h2>
+    
+    <p>The raw digitizations are stacked vertically: Blue on top, Green in the middle, and Red on the bottom. I used Python and OpenCV to slice the image into equal thirds. Using the Blue channel as my stationary anchor, I needed to slide the Green and Red plates around until the pixels physically locked into place.</p>
+
+    <div class="callout">
+        <strong>The Simple Idea:</strong> To automate this, I implemented an exhaustive search algorithm over a <code>[−15, 15]</code> pixel window. At every single (x, y) coordinate, the program scored the alignment using one of two mathematical metrics.
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>The Underlying Math</th>
+                <th>My Engineering Observations</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>L2 Norm (Euclidean Distance)</strong></td>
+                <td>Calculates the sum of squared differences between overlapping pixels.</td>
+                <td>Straightforward and fast. It mathematically penalizes raw differences in pixel brightness.</td>
+            </tr>
+            <tr>
+                <td><strong>Normalized Cross Correlation (NCC)</strong></td>
+                <td>Measures structural correlation via dot product after mean centering and normalizing the vectors.</td>
+                <td>By centering the brightness and scaling the contrast, it bypasses raw light intensity and compares the actual structural <em>patterns</em> of the image.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="side-by-side">
+        <div class="image-placeholder">
+            <img src="media/out_cathedral_l2.jpg" alt="Cathedral aligned with single-scale L2">
+    
+        </div>
+        <div class="image-placeholder">
+            <img src="media/out_cathedral_ncc.jpg" alt="Cathedral aligned with single-scale NCC">
+
+        </div>
+    </div>
+
+    <p><strong>Offsets Computed for Cathedral (L2 & NCC):</strong></p>
+    <ul>
+        <li><strong>Green:</strong> (5, 2)</li>
+        <li><strong>Red:</strong> (12, 3)</li>
+    </ul>
+
+    <p>When I tested both metrics on <code>cathedral.jpg</code>, the visual outputs were completely indistinguishable. Because the structural lighting on the building and landscape is relatively consistent across all three color filters, both algorithms landed on the exact same optimal pixel coordinates. This proved my baseline search grid was functioning perfectly.</p>
+
+    <h2>Scaling Up: The Image Pyramid</h2>
+
+    <p>While single scale search worked perfectly for the low resolution <code>.jpg</code> files, the full size <code>.tif</code> glass plate scans presented a massive problem. High resolution images require much larger pixel displacements to align properly. If I expanded my exhaustive search window to cover the massive shifts needed for a <code>.tif</code> file, the exhaustive search would become prohibitively expensive and take hours to compute.</p>
+
+    <p>To meet the requirement of processing each image efficiently, I implemented a coarse to fine image pyramid. This recursive algorithm represents the image at multiple scales, shrinking it down by a factor of 2 at each step.</p>
+
+    <div class="callout">
+        <strong>How the Pyramid Works</strong>
+        <ul>
+            <li><strong>The Base Case:</strong> The algorithm performs a fast exhaustive search on the tiniest, coarsest version of the image.</li>
+            <li><strong>Scaling Up:</strong> It moves back up the pyramid sequentially, multiplying the coordinate estimate by 2 at each higher resolution.</li>
+            <li><strong>The Refinement:</strong> At each new scale, it updates the estimate using a heavily restricted <code>[−2, 2]</code> search window to nudge the plate into perfect focus.</li>
+        </ul>
+    </div>
+
+    <h3>The Snowball Effect (When Simple Math Fails)</h3>
+
+    <div class="image-placeholder">
+        <img src="media/out_church_pyramid_l2.jpg" alt="Church aligned with pyramid L2">
+    
+    </div>
+
+    <p>When I first ran my L2 Norm pyramid on <code>church.tif</code>, the result was an absolute disaster. The color ghosting was far worse than anything I saw at the single scale level.</p>
+
+    <p>I realized this was a mathematical "snowball effect." In images like the Emir of Bukhara or this church, the images to be matched do not actually have the same brightness values because they are different color channels. Because L2 penalizes absolute brightness differences, it made a completely wrong guess at the very top of the pyramid (on the tiniest image). Because the pyramid multiplies the shift coordinates by 2 as it scales back up, a small 5 pixel error on the tiny image mathematically compounded into a massive, unrecoverable misalignment by the time it reached the full resolution.</p>
+
+    <h3>The NCC Solution</h3>
+
+    <div class="image-placeholder">
+        <img src="media/out_church_pyramid_ncc.jpg" alt="Church aligned NCC Pyramid">
+    </div>
+
+    <p>To fix this, I swapped the mathematical engine of my pyramid from L2 to Normalized Cross Correlation (NCC). Because NCC bypasses raw pixel intensities, it never gets fooled by the mismatched brightness of the sky or water. It successfully locked onto the structural edges of the church domes on the tiniest image and perfectly maintained that alignment all the way down to the final high resolution output.</p>
+
+
+    <h2>The Limits of Correlation: The Emir Exception</h2>
+
+    <p>While NCC solved the snowballing error for the church and successfully processed the vast majority of the high resolution dataset, I quickly discovered it is not a silver bullet.</p>
+
+    <div class="side-by-side">
+        <div class="image-placeholder">
+            <img src="media/out_emir_pyramid_l2.jpg" alt="Emir aligned with pyramid L2">
+
+        </div>
+        <div class="image-placeholder">
+            <img src="media/out_emir_pyramid_ncc.jpg" alt="Emir NCC Pyramid">
+
+        </div>
+    </div>
+
+    <p>When processing the Emir of Bukhara, NCC failed spectacularly on the Red channel, producing a massive ghosting effect. Surprisingly, the basic L2 Norm performed slightly better, though the result remained unacceptably blurry.</p>
+
+    <p>This failure taught me a crucial lesson about computer vision: NCC only works if the underlying structural patterns actually match. As noted in the project background, the Emir's image is uniquely difficult because the color channels represent entirely different brightness topologies. The ornate, floral patterns on his robes appear vividly in the Blue filter but are almost entirely absorbed and invisible in the Red filter.</p>
+
+    <div class="callout">
+        <p>To the NCC algorithm, these are not just different brightness levels, they look like fundamentally different shapes. Because neither raw pixel differences (L2) nor normalized correlation (NCC) can reliably match geometric patterns that only exist in one color filter, I realized I needed a completely different feature to track.</p>
+    </div>
+
+    <h2>Bells & Whistles: Better Features (Edge Detection)</h2>
+
+    <p>To solve the mismatched structural patterns in the Emir image, I tackled the optional Bells & Whistles requirement to align based on different features. Instead of relying on raw RGB similarity, I modified my algorithm to align based on image gradients and edges.</p>
+
+    <p>Even though the floral patterns on the robes vanish in the Red filter, the physical outline of his body exists consistently across all three glass plates. If I could strip away the colors and isolate just those physical outlines, the NCC algorithm would have a reliable geometric structure to lock onto.</p>
+
+    <p><strong>The Sobel Filter Implementation</strong><br>
+    To extract these edges, I used OpenCV's Sobel filters to calculate the image derivatives (the rate of change between neighboring pixels).</p>
+
+    <ul>
+        <li><strong>Horizontal & Vertical Gradients:</strong> The filter scans the image matrix and records a high value whenever it detects a sudden jump from dark to bright, effectively tracing vertical and horizontal lines.</li>
+        <li><strong>Edge Magnitude:</strong> I combined these directional gradients into a single magnitude map. In this new representation, flat areas of color turn completely black, and only the high contrast physical edges glow white.</li>
+    </ul>
+
+    <div class="image-placeholder">
+        <img src="media/out_emir_edges_ncc.jpg" alt="Emir aligned using Sobel edges and NCC">
+    </div>
+
+    <p>By passing these black and white structural maps into my existing NCC pyramid function, the algorithm completely ignored the misleading floral dye and aligned perfectly based purely on the physical silhouette. Once the mathematical shift coordinates were calculated using the edges, I simply applied those exact same shifts to the original RGB color arrays. The result is a flawlessly aligned Emir, proving that selecting the right feature is just as important as selecting the right mathematical distance metric.</p>
+
+    <h2>Final Results Gallery: The Complete Collection</h2>
+
+    <p>Using my finalized Sobel edge detection combined with Normalized Cross Correlation, I successfully processed all provided high resolution glass plates, the low resolution jpegs, and five additional images sourced directly from the Library of Congress Prokudin Gorskii collection. The following results represent the best possible alignments achieved by my final algorithm.</p>
+
+    <h3>Provided Dataset</h3>
+    <div class="gallery">
+        <div class="gallery-item">
+            <strong>Cathedral</strong>
+            <div class="image-placeholder"><img src="media/out_cathedral_ncc.jpg" alt="Cathedral aligned with NCC"></div>
+            <span class="coords">G: (5, 2)<br>R: (12, 3)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Church</strong>
+            <div class="image-placeholder"><img src="media/out_church_edges_ncc.jpg" alt="Church aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (25, 4)<br>R: (58, -4)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Emir</strong>
+            <div class="image-placeholder"><img src="media/out_emir_edges_ncc.jpg" alt="Emir aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (49, 24)<br>R: (107, 40)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Harvesters</strong>
+            <div class="image-placeholder"><img src="media/out_harvesters_edges_ncc.jpg" alt="Harvesters aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (60, 17)<br>R: (124, 14)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Icon</strong>
+            <div class="image-placeholder"><img src="media/out_icon_edges_ncc.jpg" alt="Icon aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (42, 17)<br>R: (90, 23)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Ilemselga</strong>
+            <div class="image-placeholder"><img src="media/out_ilemselga_edges_ncc.jpg" alt="Ilemselga aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (40, 7)<br>R: (131, 11)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Melons</strong>
+            <div class="image-placeholder"><img src="media/out_melons_edges_ncc.jpg" alt="Melons aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (80, 10)<br>R: (177, 13)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Monastery</strong>
+            <div class="image-placeholder"><img src="media/out_monastery_ncc.jpg" alt="Monastery aligned with NCC"></div>
+            <span class="coords">G: (-3, 2)<br>R: (3, 2)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Religous Painting</strong>
+            <div class="image-placeholder"><img src="media/out_religous_painting_edges_ncc.jpg" alt="Religious painting aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (30, 7)<br>R: (70, 6)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Self Portrait</strong>
+            <div class="image-placeholder"><img src="media/out_self_portrait_edges_ncc.jpg" alt="Self portrait aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (78, 29)<br>R: (176, 37)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Siren</strong>
+            <div class="image-placeholder"><img src="media/out_siren_edges_ncc.jpg" alt="Siren aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (49, -6)<br>R: (96, -24)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Three Generations</strong>
+            <div class="image-placeholder"><img src="media/out_three_generations_edges_ncc.jpg" alt="Three generations aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (54, 12)<br>R: (111, 9)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Tobolsk</strong>
+            <div class="image-placeholder"><img src="media/out_tobolsk_ncc.jpg" alt="Tobolsk aligned with NCC"></div>
+            <span class="coords">G: (3, 3)<br>R: (6, 3)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Wharf</strong>
+            <div class="image-placeholder"><img src="media/out_wharf_edges_ncc.jpg" alt="Wharf aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (15, -7)<br>R: (83, -16)</span>
+        </div>
+    </div>
+
+    <h3>Custom Library of Congress Alignments</h3>
+    <div class="gallery">
+        <div class="gallery-item">
+            <strong>Embroidered Cloth</strong>
+            <div class="image-placeholder"><img src="media/out_embroidered_cloth_pouches_edges_ncc.jpg" alt="Embroidered cloth aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (59, 52)<br>R: (113, 80)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Four People</strong>
+            <div class="image-placeholder"><img src="media/out_four_people_edges_ncc.jpg" alt="Four people aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (48, -16)<br>R: (90, -45)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Khorezm</strong>
+            <div class="image-placeholder"><img src="media/out_khorezm_edges_ncc.jpg" alt="Khorezm aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (40, 5)<br>R: (105, 1)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Laborers</strong>
+            <div class="image-placeholder"><img src="media/out_laborers_edges_ncc.jpg" alt="Laborers aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (43, 16)<br>R: (100, 28)</span>
+        </div>
+        <div class="gallery-item">
+            <strong>Napoleon</strong>
+            <div class="image-placeholder"><img src="media/out_napoleon_edges_ncc.jpg" alt="Napoleon aligned with Sobel edges and NCC"></div>
+            <span class="coords">G: (63, 4)<br>R: (132, -1)</span>
+        </div>
+    </div>
+
+</body>
+</html>
