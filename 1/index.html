@@ -16,6 +16,7 @@
             --text-muted: #a1a1aa; 
             --accent-color: #38bdf8; 
             --accent-gradient: linear-gradient(135deg, #38bdf8, #818cf8);
+            --warn-color: #fbbf24;
         }
 
         body {
@@ -62,6 +63,7 @@
 
         .callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
 
+        
         table {
             width: 100%;
             border-collapse: separate;
@@ -136,6 +138,12 @@
             gap: 1.5rem;
         }
 
+        .triple {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
         .gallery {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -182,6 +190,19 @@
             border-radius: 8px;
             line-height: 1.5;
         }
+
+        .badge {
+            display: inline-block;
+            font-family: ui-monospace, monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            margin-bottom: 0.6rem;
+        }
+        .badge.baseline { background: #14532d; color: #86efac; }
+        .badge.edges { background: #7c2d12; color: #fdba74; }
 
         @media print {
             body { background: white; color: black; max-width: 100%; padding: 0; }
@@ -254,6 +275,26 @@
 
     <p>When I tested both metrics on <code>cathedral.jpg</code>, the visual outputs were completely indistinguishable. Because the structural lighting on the building and landscape is relatively consistent across all three color filters, both algorithms landed on the exact same optimal pixel coordinates. This proved my baseline search grid was functioning perfectly.</p>
 
+    <p>Since L2 and NCC agreed exactly on cathedral, I didn't re-run both metrics on every remaining low-resolution JPEG; I used NCC directly for <code>monastery.jpg</code> and <code>tobolsk.jpg</code>, the other two low-res images provided for early testing:</p>
+
+    <div class="triple">
+        <div class="image-placeholder">
+            <img src="media/out_cathedral_ncc.jpg" alt="Cathedral aligned with single-scale NCC">
+        </div>
+        <div class="image-placeholder">
+            <img src="media/out_monastery_ncc.jpg" alt="Monastery aligned with single-scale NCC">
+        </div>
+        <div class="image-placeholder">
+            <img src="media/out_tobolsk_ncc.jpg" alt="Tobolsk aligned with single-scale NCC">
+        </div>
+    </div>
+
+    <p><strong>Offsets for Monastery and Tobolsk (single-scale NCC):</strong></p>
+    <ul>
+        <li><strong>Monastery:</strong> Green: (-3, 2), Red: (3, 2)</li>
+        <li><strong>Tobolsk:</strong> Green: (3, 3), Red: (6, 3)</li>
+    </ul>
+
     <h2>Scaling Up: The Image Pyramid</h2>
 
     <p>While single scale search worked perfectly for the low resolution <code>.jpg</code> files, the full size <code>.tif</code> glass plate scans presented a massive problem. High resolution images require much larger pixel displacements to align properly. If I expanded my exhaustive search window to cover the massive shifts needed for a <code>.tif</code> file, the exhaustive search would become prohibitively expensive and take hours to compute.</p>
@@ -288,10 +329,27 @@
 
     <p>To fix this, I swapped the mathematical engine of my pyramid from L2 to Normalized Cross Correlation (NCC). Because NCC bypasses raw pixel intensities, it never gets fooled by the mismatched brightness of the sky or water. It successfully locked onto the structural edges of the church domes on the tiniest image and perfectly maintained that alignment all the way down to the final high resolution output.</p>
 
+    <h3>Confirming NCC Generalizes Across the Dataset</h3>
+
+    <p>Church wasn't a one-off fix, but plain NCC pyramid alignment (no edge features, raw RGB pixels) handled the rest of the high-resolution dataset cleanly too. A few representative examples:</p>
+
+    <div class="triple">
+        <div class="image-placeholder">
+            <img src="media/out_harvesters_pyramid_ncc.jpg" alt="Harvesters aligned with pyramid NCC">
+        </div>
+        <div class="image-placeholder">
+            <img src="media/out_wharf_pyramid_ncc.jpg" alt="Wharf aligned with pyramid NCC">
+        </div>
+        <div class="image-placeholder">
+            <img src="media/out_siren_pyramid_ncc.jpg" alt="Siren aligned with pyramid NCC">
+        </div>
+    </div>
+
+
 
     <h2>The Limits of Correlation: The Emir Exception</h2>
 
-    <p>While NCC solved the snowballing error for the church and successfully processed the vast majority of the high resolution dataset, I quickly discovered it is not a silver bullet.</p>
+    <p>While NCC solved the snowballing error for the church and generalized cleanly across the rest of the high resolution dataset, I quickly discovered it is not a silver bullet.</p>
 
     <div class="side-by-side">
         <div class="image-placeholder">
@@ -332,79 +390,95 @@
 
     <p>By passing these black and white structural maps into my existing NCC pyramid function, the algorithm completely ignored the misleading floral dye and aligned perfectly based purely on the physical silhouette. Once the mathematical shift coordinates were calculated using the edges, I simply applied those exact same shifts to the original RGB color arrays. The result is a flawlessly aligned Emir, proving that selecting the right feature is just as important as selecting the right mathematical distance metric.</p>
 
+    <p>Since edge-based alignment never hurt an already-good result, I ran it as my default for the full high-resolution dataset in the gallery below rather than switching logic per image. But to be clear about what was actually <em>necessary</em>: plain NCC pyramid alignment on raw RGB pixels was sufficient for every image except the Emir, where edges only changed the outcome.</p>
+
     <h2>Final Results Gallery: The Complete Collection</h2>
 
-    <p>Using my finalized Sobel edge detection combined with Normalized Cross Correlation, I successfully processed all provided high resolution glass plates, the low resolution jpegs, and five additional images sourced directly from the Library of Congress Prokudin Gorskii collection. The following results represent the best possible alignments achieved by my final algorithm.</p>
+    <p>I successfully processed all provided high resolution glass plates, the low resolution jpegs, and five additional images sourced directly from the Library of Congress Prokudin Gorskii collection. Cathedral, monastery, and tobolsk use single-scale NCC on the provided JPEGs; the rest use my pyramid pipeline, run with Sobel edge features as the default (necessary only for the Emir, harmless everywhere else). The following results represent the best possible alignments achieved by my final algorithm.</p>
 
     <h3>Provided Dataset</h3>
     <div class="gallery">
         <div class="gallery-item">
             <strong>Cathedral</strong>
+            <span class="badge baseline">single-scale ncc</span>
             <div class="image-placeholder"><img src="media/out_cathedral_ncc.jpg" alt="Cathedral aligned with NCC"></div>
             <span class="coords">G: (5, 2)<br>R: (12, 3)</span>
         </div>
         <div class="gallery-item">
             <strong>Church</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_church_edges_ncc.jpg" alt="Church aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (25, 4)<br>R: (58, -4)</span>
         </div>
         <div class="gallery-item">
             <strong>Emir</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_emir_edges_ncc.jpg" alt="Emir aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (49, 24)<br>R: (107, 40)</span>
         </div>
         <div class="gallery-item">
             <strong>Harvesters</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_harvesters_edges_ncc.jpg" alt="Harvesters aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (60, 17)<br>R: (124, 14)</span>
         </div>
         <div class="gallery-item">
             <strong>Icon</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_icon_edges_ncc.jpg" alt="Icon aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (42, 17)<br>R: (90, 23)</span>
         </div>
         <div class="gallery-item">
             <strong>Ilemselga</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_ilemselga_edges_ncc.jpg" alt="Ilemselga aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (40, 7)<br>R: (131, 11)</span>
         </div>
         <div class="gallery-item">
             <strong>Melons</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_melons_edges_ncc.jpg" alt="Melons aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (80, 10)<br>R: (177, 13)</span>
         </div>
         <div class="gallery-item">
             <strong>Monastery</strong>
+            <span class="badge baseline">single-scale ncc</span>
             <div class="image-placeholder"><img src="media/out_monastery_ncc.jpg" alt="Monastery aligned with NCC"></div>
             <span class="coords">G: (-3, 2)<br>R: (3, 2)</span>
         </div>
         <div class="gallery-item">
-            <strong>Religous Painting</strong>
+            <strong>Religious Painting</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_religous_painting_edges_ncc.jpg" alt="Religious painting aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (30, 7)<br>R: (70, 6)</span>
         </div>
         <div class="gallery-item">
             <strong>Self Portrait</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_self_portrait_edges_ncc.jpg" alt="Self portrait aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (78, 29)<br>R: (176, 37)</span>
         </div>
         <div class="gallery-item">
             <strong>Siren</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_siren_edges_ncc.jpg" alt="Siren aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (49, -6)<br>R: (96, -24)</span>
         </div>
         <div class="gallery-item">
             <strong>Three Generations</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_three_generations_edges_ncc.jpg" alt="Three generations aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (54, 12)<br>R: (111, 9)</span>
         </div>
         <div class="gallery-item">
             <strong>Tobolsk</strong>
+            <span class="badge baseline">single-scale ncc</span>
             <div class="image-placeholder"><img src="media/out_tobolsk_ncc.jpg" alt="Tobolsk aligned with NCC"></div>
             <span class="coords">G: (3, 3)<br>R: (6, 3)</span>
         </div>
         <div class="gallery-item">
             <strong>Wharf</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_wharf_edges_ncc.jpg" alt="Wharf aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (15, -7)<br>R: (83, -16)</span>
         </div>
@@ -414,26 +488,31 @@
     <div class="gallery">
         <div class="gallery-item">
             <strong>Embroidered Cloth</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_embroidered_cloth_pouches_edges_ncc.jpg" alt="Embroidered cloth aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (59, 52)<br>R: (113, 80)</span>
         </div>
         <div class="gallery-item">
             <strong>Four People</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_four_people_edges_ncc.jpg" alt="Four people aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (48, -16)<br>R: (90, -45)</span>
         </div>
         <div class="gallery-item">
             <strong>Khorezm</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_khorezm_edges_ncc.jpg" alt="Khorezm aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (40, 5)<br>R: (105, 1)</span>
         </div>
         <div class="gallery-item">
             <strong>Laborers</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_laborers_edges_ncc.jpg" alt="Laborers aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (43, 16)<br>R: (100, 28)</span>
         </div>
         <div class="gallery-item">
             <strong>Napoleon</strong>
+            <span class="badge edges">sobel + pyramid ncc</span>
             <div class="image-placeholder"><img src="media/out_napoleon_edges_ncc.jpg" alt="Napoleon aligned with Sobel edges and NCC"></div>
             <span class="coords">G: (63, 4)<br>R: (132, -1)</span>
         </div>
