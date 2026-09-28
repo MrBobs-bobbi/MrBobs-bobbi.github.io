@@ -290,15 +290,15 @@
 2-loop vs scipy match:  True</code></pre>
 
     <h4>Runtime comparison</h4>
-    <p>Timed with a 3×3 box filter, first on a 30×30 patch and then on a 200×200 crop:</p>
+    <p>Timed with a 3×3 box filter on a 30×30 patch:</p>
     <table>
         <thead>
-            <tr><th>Implementation</th><th>30×30 patch</th><th>200×200 crop</th></tr>
+            <tr><th>Implementation</th><th>30×30 patch</th></tr>
         </thead>
         <tbody>
-            <tr><td><strong>Four loops</strong></td><td>0.0140 s</td><td>0.14s</td></tr>
-            <tr><td><strong>Two loops</strong></td><td>0.0089 s</td><td>0.18s</td></tr>
-            <tr><td><strong>scipy.signal.convolve2d</strong></td><td>0.00027 s</td><td>0.0012s</td></tr>
+            <tr><td><strong>Four loops</strong></td><td>0.0140 s</td></tr>
+            <tr><td><strong>Two loops</strong></td><td>0.0089 s</td></tr>
+            <tr><td><strong>scipy.signal.convolve2d</strong></td><td>0.00027 s</td></tr>
         </tbody>
     </table>
     <p>Even on the tiny patch, scipy is roughly 33× faster than my two-loop version. The reason is where the work happens: the four-loop version executes every multiply-add (<code>kernel_height × kernel_width</code> per output pixel) as interpreted Python. The two-loop version still loops over every output pixel in Python, but hands each <code>kh × kw</code> window to numpy as one vectorized operation, so the multiplication itself runs in compiled C. <code>scipy.signal.convolve2d</code> pushes <em>both</em> loops into compiled code, which is why it wins by another large factor.</p>
