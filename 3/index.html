@@ -689,16 +689,16 @@
                 <a href="#a-3-3">3.3 Anagrams</a>
                 <a href="#a-3-4">3.4 Hybrids</a>
             </div>
-            <div class="toc-group">
-                <span class="toc-badge part-b">Part B</span>
-                <a href="#b-overview">Overview</a>
-                <a href="#b-1-1">1.1 UNet</a>
-                <a href="#b-1-2">1.2 Denoiser</a>
-                <a href="#b-1-2-3">1.2.3 Pure Noise</a>
-                <a href="#b-2-1">2.1–2.3 Time FM</a>
-                <a href="#b-2-4">2.4–2.6 Class FM</a>
-                <a href="#b-nosched">No Scheduler</a>
-            </div>
+<div class="toc-group">
+    <span class="toc-badge part-b">Part B</span>
+    <a href="#b-overview">Overview</a>
+    <a href="#b-1-1">1.1 UNet</a>
+    <a href="#b-1-2">1.2 Denoising</a>
+    <a href="#b-1-2-3">1.2.3 Pure Noise</a>
+    <a href="#b-2-1">2.1–2.3 Time FM</a>
+    <a href="#b-2-4">2.4–2.6 Class FM</a>
+    <a href="#b-nosched">Scheduler Ablation</a>
+</div>
         </nav>
 
         <!-- =================================================================
@@ -1392,305 +1392,472 @@
         <!-- =================================================================
              PART B: FLOW MATCHING FROM SCRATCH (Starts on new page in print)
              ================================================================= -->
-        <div class="part-banner part-b part-b-start" id="b-overview">
-            <div class="part-tag">Part B · Training UNets on MNIST from Scratch</div>
-            <h2>Flow Matching from Scratch</h2>
-            <p>
-                Dataset: <strong>MNIST</strong> ($28 \times 28$, pixels in $[0, 1]$, Seed 180, Colab T4 GPU). Part 1 trains a single-step $L_2$ denoiser and demonstrates why one-step regression collapses to the dataset centroid on pure noise. Part 2 trains time-conditioned and class-conditioned Flow Matching UNets ($t = 0$ noise $\to t = 1$ data, predicting velocity $x_1 - x_0$) with Classifier-Free Guidance $u = u_{\text{uncond}} + \gamma(u_{\text{cond}} - u_{\text{uncond}})$, $\gamma = 5.0$.
-            </p>
+ <style>
 
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Run</th>
-                            <th>Hidden Dim $D$</th>
-                            <th>Batch</th>
-                            <th>Optimizer</th>
-                            <th>Learning Rate</th>
-                            <th>Scheduler</th>
-                            <th>Epochs</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Single-Step Denoiser ($\sigma = 0.5$)</td>
-                            <td>128</td>
-                            <td>256</td>
-                            <td>Adam</td>
-                            <td>$1\times 10^{-4}$</td>
-                            <td>None</td>
-                            <td>5</td>
-                        </tr>
-                        <tr>
-                            <td>Pure-Noise Denoiser</td>
-                            <td>128</td>
-                            <td>256</td>
-                            <td>Adam</td>
-                            <td>$1\times 10^{-4}$</td>
-                            <td>None</td>
-                            <td>5</td>
-                        </tr>
-                        <tr>
-                            <td>Time-Conditioned UNet</td>
-                            <td>64</td>
-                            <td>64</td>
-                            <td>Adam</td>
-                            <td>$1\times 10^{-2}$</td>
-                            <td>ExponentialLR ($\gamma = 0.1^{1/10}$ / epoch)</td>
-                            <td>10</td>
-                        </tr>
-                        <tr>
-                            <td>Class-Conditioned UNet</td>
-                            <td>64</td>
-                            <td>64</td>
-                            <td>Adam</td>
-                            <td>$1\times 10^{-2}$</td>
-                            <td>ExponentialLR ($\gamma = 0.1^{1/10}$ / epoch)</td>
-                            <td>10</td>
-                        </tr>
-                        <tr>
-                            <td>Class-Conditioned (No Scheduler)</td>
-                            <td>64</td>
-                            <td>64</td>
-                            <td>Adam</td>
-                            <td>$2\times 10^{-3}$ (constant)</td>
-                            <td>None</td>
-                            <td>10</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  .part-b-sec .b-lead { color: var(--muted); margin: 0 0 16px; }
+  .part-b-sec .b-figure-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px; margin: 16px 0;
+  }
+  .part-b-sec .b-figure-grid.b-one { grid-template-columns: 1fr; }
+  .part-b-sec .b-figure-grid.b-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .part-b-sec .b-figure-grid figure,
+  .part-b-sec .b-standalone-figure { min-width: 0; margin: 0; }
+  .part-b-sec .b-image-frame {
+    background: #f4f1e9; padding: 9px; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .part-b-sec .b-image-frame img {
+    display: block; max-width: 100%; width: 100%; height: auto;
+    object-fit: contain;
+  }
+  .part-b-sec .b-image-frame a { display: block; width: 100%; }
+  .part-b-sec .b-image-frame a:hover img { opacity: .92; }
+  .part-b-sec .b-architecture {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px; margin: 16px 0;
+  }
+  .part-b-sec .b-arch-panel {
+    padding: 16px; border: 1px solid var(--line);
+    background: var(--panel); border-radius: 4px;
+  }
+  .part-b-sec .b-arch-panel h5 {
+    margin: 0 0 11px; color: var(--teal);
+    font-family: 'DM Mono', monospace; font-size: .79rem;
+    letter-spacing: .04em; text-transform: uppercase;
+  }
+  .part-b-sec .b-arch-step {
+    padding: 8px 9px; margin-bottom: 8px;
+    border-left: 3px solid var(--teal); background: rgba(46,119,113,.055);
+    font-size: .83rem; line-height: 1.45;
+  }
+  .part-b-sec .b-arch-step:last-child { margin-bottom: 0; }
+  .part-b-sec .b-arch-step small {
+    display: block; color: var(--muted); font: .76rem/1.4 'DM Mono', monospace;
+    margin-top: 3px;
+  }
+  .part-b-sec .b-inline-note {
+    padding: 11px 14px; margin: 14px 0;
+    background: rgba(46,119,113,.065); border: 1px solid var(--line);
+    color: var(--ink); font-size: .91rem;
+  }
+  .part-b-sec .b-equation { margin: 14px 0; }
+  .part-b-sec .b-compare-table { font-size: .86rem; }
+  .part-b-sec .b-subtle { color: var(--muted); font-size: .88rem; }
+  .part-b-sec .b-code { font-family: 'DM Mono', monospace; }
+  #b-overview .table-wrap { margin-top: 18px; }
+  #b-overview .table-wrap table { min-width: 730px; }
+  #b-overview .table-wrap td { vertical-align: top; }
+  @media (max-width: 780px) {
+    .part-b-sec .b-architecture { grid-template-columns: 1fr; }
+    .part-b-sec .b-figure-grid.b-three { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 580px) {
+    .part-b-sec .b-figure-grid { grid-template-columns: 1fr; }
+  }
+  @media print {
+    .part-b-sec .b-image-frame { padding: 4px; background: #fff; }
+    .part-b-sec .b-arch-panel, .part-b-sec .b-inline-note {
+      background: #fff !important; break-inside: avoid;
+    }
+    .part-b-sec .b-architecture { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .part-b-sec .b-figure-grid { break-inside: auto; }
+    .part-b-sec figure { break-inside: avoid; }
+  }
+</style>
 
-        <!-- B.1 Training a Single-Step Denoising UNet -->
-        <section class="part-b-sec" id="b-sec-1">
-            <div class="section-heading">
-                <h3>B.1 Training a Single-Step Denoising UNet</h3>
-                <span>Sections 1.1 – 1.2.3</span>
-            </div>
+<!-- Part B overview; keep the original #b-overview TOC target. -->
+<div class="part-banner part-b part-b-start" id="b-overview">
+  <div class="part-tag">Part B · MNIST Denoising &amp; Flow Matching</div>
+  <h2>Flow Matching from Scratch</h2>
+  <p>
+    We train UNets on MNIST grayscale digits (28 &times; 28 pixels, normalized to $[0,1]$)
+    using seed 180 and a Tesla T4 GPU. First we study single-step MSE denoising and
+    why directly mapping independent Gaussian noise to digits produces an average
+    image. We then train time-conditioned and class-conditioned flow-matching models,
+    sampling by integrating a learned velocity field from noise ($t=0$) to data ($t=1$).
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Experiment</th><th>Width $D$</th><th>Batch</th><th>Adam LR</th><th>Schedule</th><th>Epochs</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Single-step denoiser ($\sigma=0.5$)</td><td>128</td><td>256</td><td>$10^{-4}$</td><td>None</td><td>5</td></tr>
+        <tr><td>Pure-noise denoiser</td><td>128</td><td>256</td><td>$10^{-4}$</td><td>None</td><td>5</td></tr>
+        <tr><td>Time-conditioned FM</td><td>64</td><td>64</td><td>$10^{-2}$</td><td>Exponential decay, $\gamma=0.1^{1/10}$ per epoch</td><td>10</td></tr>
+        <tr><td>Time + class-conditioned FM</td><td>64</td><td>64</td><td>$10^{-2}$</td><td>Exponential decay, $\gamma=0.1^{1/10}$ per epoch</td><td>10</td></tr>
+        <tr><td>Class-conditioned FM, no scheduler</td><td>64</td><td>64</td><td>$2\times10^{-3}$</td><td>Constant LR</td><td>10</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 
-            <!-- B 1.1 Interactive UNet Architecture -->
-            <article class="subsection" id="b-1-1">
-                <div class="subsection-header">
-                    <h4>B 1.1 Implementing the UNet</h4>
-                    <span class="sub-num">B 1.1 / Architecture &amp; Conditioning</span>
-                </div>
-                <p>
-                    Our UNet is built from atomic blocks—<code>Conv</code> ($3\times 3$, stride 1, BatchNorm, GELU), <code>DownConv</code> ($3\times 3$, stride 2), <code>UpConv</code> (<code>ConvTranspose2d</code> $4\times 4$, stride 2), <code>Flatten</code> (<code>AvgPool2d</code> $7\times 7$, GELU), and <code>Unflatten</code> (<code>ConvTranspose2d</code> $7\times 7$, stride 7)—and composed blocks (<code>ConvBlock</code>, <code>DownBlock</code>, <code>UpBlock</code>) with channel width $D$. Hover or click any block below to inspect tensor shapes, or toggle the conditioning overlay.
-                </p>
+<section class="part-b-sec" id="b-sec-1">
+  <div class="section-heading">
+    <h3>B.1 Training a Single-Step Denoising UNet</h3>
+    <span>Sections 1.1 – 1.2.3</span>
+  </div>
 
-                <div class="interactive-only">
-                    <div class="controls-bar">
-                        <button class="btn" type="button" id="toggle-unet-cond">Toggle Time &amp; Class Conditioning Overlay</button>
-                        <span id="unet-hover-readout">Hover/click any block in the diagram to inspect output tensor shape.</span>
-                    </div>
-                </div>
+  <article class="subsection" id="b-1-1">
+    <div class="subsection-header">
+      <h4>B 1.1 Implementing the UNet</h4>
+      <span class="sub-num">Architecture &amp; Skip Connections</span>
+    </div>
+    <p>
+      Our implementation uses <code>Conv</code> (3&times;3, stride 1, padding 1),
+      <code>DownConv</code> (3&times;3, stride 2, padding 1), and
+      <code>UpConv</code> (transposed convolution 4&times;4, stride 2, padding 1).
+      These layers use BatchNorm and GELU. <code>Flatten</code> applies
+      7&times;7 average pooling followed by GELU; <code>Unflatten</code> applies
+      a 7&times;7, stride-7 transposed convolution followed by BatchNorm and GELU.
+      A <code>ConvBlock</code> is two <code>Conv</code> layers; a
+      <code>DownBlock</code> is <code>DownConv</code> + <code>ConvBlock</code>;
+      an <code>UpBlock</code> is <code>UpConv</code> + <code>ConvBlock</code>.
+    </p>
+    <div class="b-architecture" aria-label="UNet encoder, bottleneck, and decoder with tensor dimensions">
+      <div class="b-arch-panel">
+        <h5>01 / Encoder</h5>
+        <div class="b-arch-step">Input image<small>$1\times28\times28$</small></div>
+        <div class="b-arch-step"><code>conv_in</code> &rarr; skip $x_a$<small>$D\times28\times28$</small></div>
+        <div class="b-arch-step"><code>down1</code> &rarr; skip $x_b$<small>$D\times14\times14$</small></div>
+        <div class="b-arch-step"><code>down2</code> &rarr; skip $x_c$<small>$2D\times7\times7$</small></div>
+      </div>
+      <div class="b-arch-panel">
+        <h5>02 / Bottleneck</h5>
+        <div class="b-arch-step"><code>flatten(x_c)</code><small>$2D\times1\times1$</small></div>
+        <div class="b-arch-step"><code>unflatten</code><small>$2D\times7\times7$</small></div>
+        <div class="b-arch-step">Concatenate with $x_c$<small>$4D\times7\times7$</small></div>
+        <div class="b-arch-step">Skip connections join along the <em>channel</em> axis, not spatial dimensions.</div>
+      </div>
+      <div class="b-arch-panel">
+        <h5>03 / Decoder</h5>
+        <div class="b-arch-step"><code>up1</code><small>$D\times14\times14$</small></div>
+        <div class="b-arch-step">Concat with $x_b$ &rarr; <code>up2</code><small>$2D\times14\times14$ &rarr; $D\times28\times28$</small></div>
+        <div class="b-arch-step">Concat with $x_a$ &rarr; <code>conv_out</code><small>$2D\times28\times28$ &rarr; $D\times28\times28$</small></div>
+        <div class="b-arch-step">Final 3&times;3 convolution<small>$1\times28\times28$</small></div>
+      </div>
+    </div>
+    <div class="b-inline-note">
+      <strong>Important distinction:</strong> This is the <em>unconditional</em> UNet for Part 1.
+      Part 2 retains the same encoder/decoder but adds time embeddings and, later,
+      class embeddings. Their two modulation formulas are described separately in
+      B 2.1 and B 2.4; they are not interchangeable.
+    </div>
+  </article>
 
-                <div class="unet-svg-wrap">
-                    <svg viewBox="0 0 920 270" width="100%" height="auto" aria-label="UNet architecture diagram">
-                        <!-- Skip connection dashed lines -->
-                        <path d="M 175 55 L 690 55" stroke="#63706d" stroke-width="1.5" stroke-dasharray="5,5" fill="none"/>
-                        <text x="430" y="47" font-family="DM Mono, monospace" font-size="10" fill="#63706d" text-anchor="middle">Concat Skip (D × 28 × 28)</text>
+  <article class="subsection" id="b-1-2">
+    <div class="subsection-header">
+      <h4>B 1.2 Noising Process Visualization</h4>
+      <span class="sub-num">Gaussian Corruption</span>
+    </div>
+    <div class="math-box b-equation">$$z=x+\sigma\epsilon,\qquad \epsilon\sim\mathcal N(0,I).$$</div>
+    <p>
+      The first eight MNIST test images are displayed across columns. Each row
+      increases the noise level, with $\sigma\in\{0,0.2,0.4,0.5,0.6,0.8,1.0\}$.
+      The notebook draws a fresh Gaussian noise tensor for each noise level;
+      this is not the flow-matching interpolation used in Part 2.
+    </p>
+    <figure class="b-standalone-figure">
+      <div class="b-image-frame"><a href="images/noising_process.png" target="_blank" rel="noopener"><img src="images/noising_process.png" alt="Seven rows of MNIST images showing Gaussian noise increasing from sigma zero to one"></a></div>
+      <figcaption>MNIST noising process, seven rows (noise levels) by eight test digits.</figcaption>
+    </figure>
+    <div class="observation"><strong>Observation:</strong> Digit structure is clear at small $\sigma$. As $\sigma$ approaches $1.0$, noise increasingly dominates the signal, and the original strokes become difficult to distinguish.</div>
+  </article>
 
-                        <path d="M 275 115 L 590 115" stroke="#63706d" stroke-width="1.5" stroke-dasharray="5,5" fill="none"/>
-                        <text x="430" y="107" font-family="DM Mono, monospace" font-size="10" fill="#63706d" text-anchor="middle">Concat Skip (D × 14 × 14)</text>
+  <article class="subsection" id="b-1-2-1">
+    <div class="subsection-header">
+      <h4>B 1.2.1 Training the Single-Step Denoiser</h4>
+      <span class="sub-num">$\sigma=0.5$ · 5 Epochs</span>
+    </div>
+    <p>
+      We train <code>UnconditionalUNet(1, 128)</code> on the MNIST <em>training</em>
+      split for five epochs, using batch size 256, Adam learning rate $10^{-4}$,
+      and pixel-wise MSE. Fresh $\epsilon$ is drawn for each batch, so the model
+      does not repeatedly see the exact same corrupted images.
+    </p>
+    <div class="math-box b-equation">$$\mathcal L_{\mathrm{denoise}}=\mathbb E_{x,\epsilon}\left[\lVert D_\theta(x+0.5\epsilon)-x\rVert_2^2\right].$$</div>
+    <div class="b-figure-grid b-one">
+      <figure>
+        <div class="b-image-frame"><a href="images/denoise_loss.png" target="_blank" rel="noopener"><img src="images/denoise_loss.png" alt="Single step denoiser mean squared error plotted over optimizer steps"></a></div>
+        <figcaption>Training loss over all optimizer steps; the curve includes the notebook's smoothed trace.</figcaption>
+      </figure>
+    </div>
+    <div class="b-figure-grid">
+      <figure>
+        <div class="b-image-frame"><a href="images/denoise_epoch1.png" target="_blank" rel="noopener"><img src="images/denoise_epoch1.png" alt="Clean MNIST digits, their noisy versions, and reconstructions from the epoch 1 model"></a></div>
+        <figcaption>Epoch 1 &middot; Top: clean; middle: noisy at $\sigma=0.5$; bottom: prediction.</figcaption>
+      </figure>
+      <figure>
+        <div class="b-image-frame"><a href="images/denoise_epoch5.png" target="_blank" rel="noopener"><img src="images/denoise_epoch5.png" alt="Clean MNIST digits, their noisy versions, and reconstructions from the epoch 5 model"></a></div>
+        <figcaption>Epoch 5 &middot; Same ten test images and same noisy inputs for direct comparison.</figcaption>
+      </figure>
+    </div>
+    <div class="observation"><strong>Observation:</strong> After one epoch, the network already recovers recognizable digit shapes. After five epochs, strokes are cleaner and more consistent, although the MSE objective can smooth fine details. Training loss falls rapidly before leveling off.</div>
+  </article>
 
-                        <path d="M 375 175 L 495 175" stroke="#63706d" stroke-width="1.5" stroke-dasharray="5,5" fill="none"/>
+  <article class="subsection" id="b-1-2-2">
+    <div class="subsection-header">
+      <h4>B 1.2.2 Out-of-Distribution Testing</h4>
+      <span class="sub-num">Unseen Noise Levels</span>
+    </div>
+    <p>
+      We evaluate the epoch-5 model, trained only at $\sigma=0.5$, on the
+      <em>same</em> held-out test image (digit 7) under
+      $\sigma\in\{0,0.2,0.4,0.5,0.6,0.8,1.0\}$.
+    </p>
+    <figure class="b-standalone-figure">
+      <div class="b-image-frame"><a href="images/ood_denoise.png" target="_blank" rel="noopener"><img src="images/ood_denoise.png" alt="One digit seven at seven different noise levels, with model reconstructions beneath"></a></div>
+      <figcaption>Top: corrupted inputs; bottom: reconstructed outputs. Columns progress from $\sigma=0$ to $\sigma=1.0$.</figcaption>
+    </figure>
+    <div class="observation"><strong>Observation:</strong> The denoiser handles lower and moderately higher noise levels reasonably well despite training only at $\sigma=0.5$. At $\sigma=0.8$ the seven is visibly degraded; at $\sigma=1.0$ the output is heavily distorted and can resemble a different digit. This shows a fixed-noise denoiser is not robust to arbitrarily strong corruption.</div>
+  </article>
 
-                        <!-- Blocks -->
-                        <g class="unet-node" data-shape="Input: 1 × 28 × 28">
-                            <rect x="15" y="35" width="70" height="40" rx="4" fill="#f4f1e9" stroke="#202b2a"/>
-                            <text x="50" y="53" font-family="DM Mono" font-size="10" text-anchor="middle">Input</text>
-                            <text x="50" y="67" font-family="DM Mono" font-size="9" fill="#63706d" text-anchor="middle">1×28×28</text>
-                        </g>
+  <article class="subsection" id="b-1-2-3">
+    <div class="subsection-header">
+      <h4>B 1.2.3 Denoising Pure Noise</h4>
+      <span class="sub-num">Why MSE Produces an Average Digit</span>
+    </div>
+    <p>
+      We train a <em>new</em> UNet with the same $D=128$ architecture, batch size
+      256, Adam $10^{-4}$, and five epochs, but now its inputs are independent
+      Gaussian noise $\epsilon\sim\mathcal N(0,I)$, and the targets are MNIST digits.
+      Each output grid contains nine noise-generated predictions followed by the
+      mean training image in its last column.
+    </p>
+    <div class="math-box b-equation">$$\mathcal L_{\mathrm{pure}}=\mathbb E_{x,\epsilon}\left[\lVert D_\theta(\epsilon)-x\rVert_2^2\right].$$</div>
+    <div class="b-figure-grid b-one">
+      <figure>
+        <div class="b-image-frame"><a href="images/denoise_pure_noise_loss.png" target="_blank" rel="noopener"><img src="images/denoise_pure_noise_loss.png" alt="Training loss for a network attempting to predict MNIST images from independent Gaussian noise"></a></div>
+        <figcaption>Pure-noise training MSE across five epochs.</figcaption>
+      </figure>
+    </div>
+    <div class="b-figure-grid">
+      <figure>
+        <div class="b-image-frame"><a href="images/pure_noise_epoch1.png" target="_blank" rel="noopener"><img src="images/pure_noise_epoch1.png" alt="Epoch one predictions from independent random noise followed by the mean MNIST image"></a></div>
+        <figcaption>Epoch 1 &middot; Last tile is the dataset mean. MSE to mean: $3.48\times10^{-4}$.</figcaption>
+      </figure>
+      <figure>
+        <div class="b-image-frame"><a href="images/pure_noise_epoch5.png" target="_blank" rel="noopener"><img src="images/pure_noise_epoch5.png" alt="Epoch five predictions from independent random noise followed by the mean MNIST image"></a></div>
+        <figcaption>Epoch 5 &middot; Last tile is the dataset mean. MSE to mean: $1.16\times10^{-4}$.</figcaption>
+      </figure>
+    </div>
+    <div class="observation">
+      <strong>Why predictions collapse:</strong> The outputs become nearly identical,
+      ghost-like combinations of multiple digits rather than distinct 0–9 samples.
+      Since the input noise is statistically independent of the target image,
+      the MSE-optimal predictor is the unconditional mean:
+      $D_\theta^*(\epsilon)=\mathbb E[x\mid\epsilon]=\mathbb E[x]$.
+      The measured mean-image MSE decreases from approximately
+      $3.48\times10^{-4}$ to $1.16\times10^{-4}$ between epochs 1 and 5.
+      This motivates learning a <em>time-dependent velocity field</em> instead of
+      trying to generate a digit in a single regression step.
+    </div>
+  </article>
+</section>
 
-                        <g class="unet-node" data-shape="ConvBlock: D × 28 × 28">
-                            <rect x="100" y="35" width="75" height="40" rx="4" fill="#fffdf8" stroke="#2e7771"/>
-                            <text x="137" y="53" font-family="DM Mono" font-size="10" text-anchor="middle">ConvBlock</text>
-                            <text x="137" y="67" font-family="DM Mono" font-size="9" fill="#2e7771" text-anchor="middle">D×28×28</text>
-                        </g>
+<section class="part-b-sec" id="b-sec-2">
+  <div class="section-heading">
+    <h3>B.2 Training a Flow Matching Model</h3>
+    <span>Sections 2.1 – 2.6 &amp; No-Scheduler Experiment</span>
+  </div>
+  <p class="b-lead">
+    For each clean training image $x_1$, we draw independent standard Gaussian noise
+    $x_0$, sample $t\sim U[0,1]$, and interpolate $x_t$ between noise and data.
+    The model predicts the velocity $x_1-x_0$; sampling integrates this prediction
+    forward from $t=0$ to $t=1$.
+  </p>
+  <div class="math-box b-equation">
+    $$x_t=(1-t)x_0+tx_1,\qquad x_0\sim\mathcal N(0,I),$$
+    $$u_t=\frac{\mathrm d x_t}{\mathrm d t}=x_1-x_0,\qquad
+      \mathcal L_{\mathrm{FM}}=\mathbb E\!\left[\lVert u_\theta(x_t,t)-u_t\rVert_2^2\right].$$
+  </div>
 
-                        <g class="unet-node" data-shape="DownBlock 1: D × 14 × 14">
-                            <rect x="195" y="95" width="80" height="40" rx="4" fill="#fffdf8" stroke="#2e7771"/>
-                            <text x="235" y="113" font-family="DM Mono" font-size="10" text-anchor="middle">DownBlock1</text>
-                            <text x="235" y="127" font-family="DM Mono" font-size="9" fill="#2e7771" text-anchor="middle">D×14×14</text>
-                        </g>
+  <article class="subsection" id="b-2-1">
+    <div class="subsection-header">
+      <h4>B 2.1 Adding Time Conditioning to the UNet</h4>
+      <span class="sub-num">Normalized $t$ &middot; Two FCBlocks</span>
+    </div>
+    <p>
+      We retain the unconditional UNet backbone and add two time-embedding
+      <code>FCBlock</code>s. Each FCBlock is <code>Linear &rarr; GELU &rarr; Linear</code>.
+      A normalized scalar $t\in[0,1]$ becomes a $(2D)$-channel embedding for
+      <code>unflatten</code> and a $D$-channel embedding for <code>up1</code>.
+      The embeddings broadcast across spatial dimensions and multiplicatively
+      modulate the corresponding decoder features.
+    </p>
+    <div class="math-box b-equation">
+      $$t_1=\operatorname{FC}_1(t)\in\mathbb R^{2D},\qquad
+        t_2=\operatorname{FC}_2(t)\in\mathbb R^{D},$$
+      $$h_{\mathrm{unflat}}=\operatorname{Unflatten}(h_{\mathrm{flat}})\odot t_1,$$
+      $$h_{\mathrm{up1}}=\operatorname{UpBlock}_1([h_{\mathrm{unflat}},x_c])\odot t_2.$$
+    </div>
+    <p class="b-subtle">These are the time-only formulas used by <code>TimeConditionalUNet</code> in the notebook. No class vector is used in this model.</p>
+  </article>
 
-                        <g class="unet-node" data-shape="DownBlock 2: 2D × 7 × 7">
-                            <rect x="295" y="155" width="80" height="40" rx="4" fill="#fffdf8" stroke="#2e7771"/>
-                            <text x="335" y="173" font-family="DM Mono" font-size="10" text-anchor="middle">DownBlock2</text>
-                            <text x="335" y="187" font-family="DM Mono" font-size="9" fill="#2e7771" text-anchor="middle">2D×7×7</text>
-                        </g>
+  <article class="subsection" id="b-2-2">
+    <div class="subsection-header">
+      <h4>B 2.2 Training the Time-Conditioned UNet</h4>
+      <span class="sub-num">$D=64$ &middot; 10 Epochs</span>
+    </div>
+    <p>
+      We train on MNIST's training split using batch size 64, Adam with initial
+      learning rate $10^{-2}$, and MSE against the target flow $x_1-x_0$.
+      Fresh noise and an independent uniform timestep are sampled for every
+      image in each batch. <code>ExponentialLR</code> multiplies the learning rate
+      by $0.1^{1/10}$ after each epoch. After the tenth scheduler update,
+      the configured learning rate has decreased from $10^{-2}$ to $10^{-3}$.
+    </p>
+    <figure class="b-standalone-figure">
+      <div class="b-image-frame"><a href="images/time_loss.png" target="_blank" rel="noopener"><img src="images/time_loss.png" alt="Time conditioned flow matching training MSE versus optimizer step"></a></div>
+      <figcaption>Time-conditioned flow-matching MSE over ten epochs.</figcaption>
+    </figure>
+    <div class="observation"><strong>Observation:</strong> The flow-prediction loss drops steeply at the beginning and then decreases more gradually as training proceeds. This plot measures velocity regression, not directly the visual quality of generated digits.</div>
+  </article>
 
-                        <g class="unet-node" data-shape="Flatten (AvgPool 7×7 + GELU): 2D × 1 × 1">
-                            <rect x="395" y="210" width="80" height="40" rx="4" fill="#e8f0ec" stroke="#202b2a"/>
-                            <text x="435" y="228" font-family="DM Mono" font-size="10" text-anchor="middle">Flatten</text>
-                            <text x="435" y="242" font-family="DM Mono" font-size="9" fill="#63706d" text-anchor="middle">2D×1×1</text>
-                        </g>
+  <article class="subsection" id="b-2-3">
+    <div class="subsection-header">
+      <h4>B 2.3 Sampling from the Time-Conditioned UNet</h4>
+      <span class="sub-num">50 Euler Steps &middot; Epochs 1, 5, 10</span>
+    </div>
+    <p>
+      Starting with 40 independently sampled noise images (fixed seed 180),
+      we run 50 explicit Euler steps, recomputing the predicted velocity at
+      each normalized time $t_i=i/50$. Checkpoints from epochs 1, 5, and 10
+      use the same sampling seed for comparison.
+    </p>
+    <div class="math-box b-equation">$$x_{i+1}=x_i+\frac1{50}\,u_\theta(x_i,i/50),\qquad i=0,\ldots,49.$$</div>
+    <div class="b-figure-grid b-three">
+      <figure>
+        <div class="b-image-frame"><a href="images/time_epoch1.png" target="_blank" rel="noopener"><img src="images/time_epoch1.png" alt="Time conditioned generated digits after epoch one"></a></div>
+        <figcaption>Time-only flow &middot; Epoch 1</figcaption>
+      </figure>
+      <figure>
+        <div class="b-image-frame"><a href="images/time_epoch5.png" target="_blank" rel="noopener"><img src="images/time_epoch5.png" alt="Time conditioned generated digits after epoch five"></a></div>
+        <figcaption>Time-only flow &middot; Epoch 5</figcaption>
+      </figure>
+      <figure>
+        <div class="b-image-frame"><a href="images/time_epoch10.png" target="_blank" rel="noopener"><img src="images/time_epoch10.png" alt="Time conditioned generated digits after epoch ten"></a></div>
+        <figcaption>Time-only flow &middot; Epoch 10</figcaption>
+      </figure>
+    </div>
+    <div class="observation"><strong>Observation:</strong> Epoch 1 samples are mostly fragmented or ambiguous. By epoch 5 many digits are recognizable, and epoch 10 samples are generally more coherent. Because the model has no class information, it produces an uncontrolled mixture of digit identities, some still distorted.</div>
+  </article>
 
-                        <g class="unet-node" data-shape="Unflatten (7×7) -> Concat Skip -> 4D × 7 × 7">
-                            <rect x="495" y="155" width="85" height="40" rx="4" fill="#fffdf8" stroke="#2e7771"/>
-                            <text x="537" y="173" font-family="DM Mono" font-size="10" text-anchor="middle">Unflatten+Cat</text>
-                            <text x="537" y="187" font-family="DM Mono" font-size="9" fill="#2e7771" text-anchor="middle">4D×7×7</text>
-                        </g>
+  <article class="subsection" id="b-2-4">
+    <div class="subsection-header">
+      <h4>B 2.4 Adding Class Conditioning to the UNet</h4>
+      <span class="sub-num">One-Hot Labels &middot; 10% Dropout</span>
+    </div>
+    <p>
+      We extend the time-conditioned architecture with two additional FCBlocks.
+      Each digit label $c\in\{0,\ldots,9\}$ becomes a 10-dimensional one-hot
+      vector. During training, 10% of examples replace that vector with zeros,
+      teaching the same network both a class-conditional and an unconditional
+      velocity prediction. The class-conditioned decoder uses <em>affine</em>
+      modulation, not the time-only multiplication from B 2.1.
+    </p>
+    <div class="math-box b-equation">
+      $$\tilde c = m\,\mathrm{onehot}(c),\qquad m\sim\mathrm{Bernoulli}(0.9),$$
+      $$c_1=\operatorname{FC}_{1,c}(\tilde c),\quad c_2=\operatorname{FC}_{2,c}(\tilde c),$$
+      $$h_{\mathrm{unflat}}=c_1\odot\operatorname{Unflatten}(h_{\mathrm{flat}})+t_1,$$
+      $$h_{\mathrm{up1}}=c_2\odot\operatorname{UpBlock}_1([h_{\mathrm{unflat}},x_c])+t_2.$$
+    </div>
+    <p class="b-subtle">Setting $m=0$ uses a zero class vector (unconditional branch); setting $m=1$ uses the requested digit class.</p>
+  </article>
 
-                        <g class="unet-node" data-shape="UpBlock 1 -> Concat Skip -> 2D × 14 × 14">
-                            <rect x="590" y="95" width="85" height="40" rx="4" fill="#fffdf8" stroke="#2e7771"/>
-                            <text x="632" y="113" font-family="DM Mono" font-size="10" text-anchor="middle">UpBlock1+Cat</text>
-                            <text x="632" y="127" font-family="DM Mono" font-size="9" fill="#2e7771" text-anchor="middle">2D×14×14</text>
-                        </g>
+  <article class="subsection" id="b-2-5">
+    <div class="subsection-header">
+      <h4>B 2.5 Training the Class-Conditioned UNet</h4>
+      <span class="sub-num">10 Epochs &middot; Classifier-Free Dropout</span>
+    </div>
+    <p>
+      A new <code>ClassConditionalUNet(1, 10, 64)</code> is trained on MNIST
+      using batch size 64 and the same flow-matching MSE target as B 2.2.
+      We use Adam with initial LR $10^{-2}$, exponential LR decay
+      $\gamma=0.1^{1/10}$ once per epoch, and unconditional dropout probability
+      $p_{\mathrm{uncond}}=0.1$. The checkpoints at epochs 1, 5, and 10 are
+      sampled below.
+    </p>
+    <figure class="b-standalone-figure">
+      <div class="b-image-frame"><a href="images/class_loss.png" target="_blank" rel="noopener"><img src="images/class_loss.png" alt="Class conditioned flow matching training MSE versus optimizer step"></a></div>
+      <figcaption>Class-conditioned flow-matching MSE over ten epochs.</figcaption>
+    </figure>
+    <div class="observation"><strong>Observation:</strong> Like the time-only run, class-conditioned training shows a sharp early decrease in velocity MSE followed by a flatter trajectory. Visual samples in B 2.6 provide the more meaningful check that conditioning controls the output digit.</div>
+  </article>
 
-                        <g class="unet-node" data-shape="UpBlock 2 -> Concat Skip -> 2D × 28 × 28">
-                            <rect x="690" y="35" width="85" height="40" rx="4" fill="#fffdf8" stroke="#2e7771"/>
-                            <text x="732" y="53" font-family="DM Mono" font-size="10" text-anchor="middle">UpBlock2+Cat</text>
-                            <text x="732" y="67" font-family="DM Mono" font-size="9" fill="#2e7771" text-anchor="middle">2D×28×28</text>
-                        </g>
+  <article class="subsection" id="b-2-6">
+    <div class="subsection-header">
+      <h4>B 2.6 Sampling with Classifier-Free Guidance</h4>
+      <span class="sub-num">CFG $\gamma=5$ &middot; 300 Euler Steps</span>
+    </div>
+    <p>
+      For each epoch checkpoint, we request four instances of each label
+      0 through 9: each of the four rows contains digits 0, 1, &hellip;, 9.
+      Starting from a fixed Gaussian seed, the model takes 300 Euler steps.
+      Both conditional and unconditional velocities are evaluated at the
+      <em>same</em> $x_t$ and $t$, then combined using classifier-free guidance.
+    </p>
+    <div class="math-box b-equation">
+      $$u_{\mathrm{CFG}}=u_{\mathrm{uncond}}+5\,(u_{\mathrm{cond}}-u_{\mathrm{uncond}}),$$
+      $$x_{i+1}=x_i+\frac1{300}\,u_{\mathrm{CFG}}(x_i,i/300,c).$$
+    </div>
+    <div class="b-figure-grid b-three">
+      <figure>
+        <div class="b-image-frame"><a href="images/class_epoch1.png" target="_blank" rel="noopener"><img src="images/class_epoch1.png" alt="Class conditioned MNIST generations after one epoch, four rows of digit labels zero through nine"></a></div>
+        <figcaption>Class-conditioned &middot; Epoch 1 · Four samples per digit</figcaption>
+      </figure>
+      <figure>
+        <div class="b-image-frame"><a href="images/class_epoch5.png" target="_blank" rel="noopener"><img src="images/class_epoch5.png" alt="Class conditioned MNIST generations after five epochs, four rows of digit labels zero through nine"></a></div>
+        <figcaption>Class-conditioned &middot; Epoch 5 · Four samples per digit</figcaption>
+      </figure>
+      <figure>
+        <div class="b-image-frame"><a href="images/class_epoch10.png" target="_blank" rel="noopener"><img src="images/class_epoch10.png" alt="Class conditioned MNIST generations after ten epochs, four rows of digit labels zero through nine"></a></div>
+        <figcaption>Class-conditioned &middot; Epoch 10 · Four samples per digit</figcaption>
+      </figure>
+    </div>
+    <div class="observation"><strong>Observation:</strong> Class labels already influence the one-epoch outputs, but some strokes are noisy and several digits are imperfect. By epochs 5 and 10, each column more reliably matches its requested label. Compared with the time-only samples, these 4&times;10 grids demonstrate both more consistent digit identity and direct control of which digit is generated.</div>
+  </article>
 
-                        <g class="unet-node" data-shape="ConvBlock (D×28×28) + Final Conv2d -> Output: 1 × 28 × 28">
-                            <rect x="795" y="35" width="110" height="40" rx="4" fill="#f4f1e9" stroke="#202b2a"/>
-                            <text x="850" y="53" font-family="DM Mono" font-size="10" text-anchor="middle">ConvBlock+Out</text>
-                            <text x="850" y="67" font-family="DM Mono" font-size="9" fill="#63706d" text-anchor="middle">1×28×28</text>
-                        </g>
-
-                        <!-- Conditioning Overlay (Shown when toggled or in print) -->
-                        <g id="unet-cond-group" style="display: none;">
-                            <rect x="485" y="212" width="215" height="38" rx="4" fill="#fffdf8" stroke="#d7654d" stroke-width="2"/>
-                            <text x="592" y="228" font-family="DM Mono" font-size="9.5" fill="#d7654d" text-anchor="middle">unflatten = c1 * unflatten + t1</text>
-                            <text x="592" y="242" font-family="DM Mono" font-size="9.5" fill="#d7654d" text-anchor="middle">up1 = c2 * up1 + t2</text>
-                        </g>
-                    </svg>
-                </div>
-            </article>
-
-            <!-- B 1.2 Noising Process -->
-            <article class="subsection" id="b-1-2">
-                <div class="subsection-header">
-                    <h4>B 1.2 Noising Process Visualization</h4>
-                    <span class="sub-num">B 1.2 / $z = x + \sigma\epsilon$</span>
-                </div>
-                <p>
-                    We corrupt clean MNIST digits $x \in [0, 1]$ via $z = x + \sigma\epsilon$, $\epsilon \sim \mathcal{N}(0, I)$, across 8 test digits (columns) and 7 noise levels $\sigma \in \{0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0\}$ (rows, top to bottom).
-                </p>
-
-                <figure>
-                    <div class="img-wrap auto-ratio overlay-frame-wrap">
-                        <img src="images/partb/noising_process_crop.png" alt="MNIST noising process grid across 8 digits and 7 sigma rows">
-                    </div>
-                    <figcaption>Rows top-to-bottom: $\sigma = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0$ across the first 8 test digits.</figcaption>
-                </figure>
-            </article>
-
-            <!-- B 1.2.1 Training the Denoiser -->
-            <article class="subsection" id="b-1-2-1">
-                <div class="subsection-header">
-                    <h4>B 1.2.1 Training the Single-Step Denoiser ($\sigma = 0.5$)</h4>
-                    <span class="sub-num">B 1.2.1 / $D = 128$, 5 Epochs</span>
-                </div>
-                <p>
-                    Trained on the MNIST training set with batch size 256, Adam ($\text{lr} = 10^{-4}$), hidden width $D = 128$ for 5 epochs at fixed $\sigma = 0.5$ with fresh noise sampled every batch under MSE loss.
-                </p>
-
-                <figure style="margin-bottom: 18px;">
-                    <div class="img-wrap wide zoom-wrap">
-                        <img src="images/partb/denoise_loss.png" alt="Single-step denoiser training loss curve">
-                    </div>
-                    <figcaption>Single-step denoiser training MSE loss over 5 epochs ($\sigma = 0.5$).</figcaption>
-                </figure>
-
-                <div class="img-grid cols-2" style="margin-top: 16px;">
-                    <figure>
-                        <div class="img-wrap auto-ratio"><img src="images/partb/denoise_epoch1.png" alt="Denoiser test results after epoch 1"></div>
-                        <figcaption>After Epoch 1 (Rows: Clean / Noisy $\sigma=0.5$ / Predicted)</figcaption>
-                    </figure>
-                    <figure>
-                        <div class="img-wrap auto-ratio"><img src="images/partb/denoise_epoch5.png" alt="Denoiser test results after epoch 5"></div>
-                        <figcaption>After Epoch 5 (Rows: Clean / Noisy $\sigma=0.5$ / Predicted)</figcaption>
-                    </figure>
-                </div>
-
-                <div class="observation">
-                    <strong>Observation:</strong> <span data-cfg-text="obsB121">Epoch 1 outputs are already readable but slightly blurry, and by Epoch 5 stroke boundaries are noticeably crisper; the training loss drops rapidly from ~0.22 and plateaus smoothly.</span>
-                </div>
-            </article>
-
-            <!-- B 1.2.2 Out-of-Distribution Testing -->
-            <article class="subsection" id="b-1-2-2">
-                <div class="subsection-header">
-                    <h4>B 1.2.2 Out-of-Distribution Testing</h4>
-                    <span class="sub-num">B 1.2.2 / Generalization Across $\sigma$</span>
-                </div>
-                <p>
-                    Evaluating our $\sigma = 0.5$-trained denoiser on the same test digit (7) corrupted at $\sigma \in \{0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0\}$.
-                </p>
-
-                <figure>
-                    <div class="img-wrap auto-ratio overlay-frame-wrap">
-                        <img src="images/partb/ood_denoise_crop.png" alt="Out of distribution denoising results for sigma 0.0 to 1.0">
-                    </div>
-                    <figcaption>Top row: Noisy inputs ($\sigma = 0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0$). Bottom row: Denoised predictions.</figcaption>
-                </figure>
-
-                <div class="observation">
-                    <strong>Observation:</strong> <span data-cfg-text="obsB122">Reconstructions remain clean for $\sigma \le 0.6$ (lower noise levels are trivial since less noise needs removal), begin to distort at $\sigma = 0.8$, and break down with residual background artifacts at $\sigma = 1.0$.</span>
-                </div>
-            </article>
-
-            <!-- B 1.2.3 Denoising Pure Noise -->
-            <article class="subsection" id="b-1-2-3">
-                <div class="subsection-header">
-                    <h4>B 1.2.3 Denoising Pure Noise</h4>
-                    <span class="sub-num">B 1.2.3 / Centroid Collapse Under MSE</span>
-                </div>
-                <p>
-                    Training the exact same UNet architecture to map pure Gaussian noise $\epsilon \sim \mathcal{N}(0, I)$ directly to clean training digits $x$ under MSE loss. The final tile in each grid displays the mean training digit.
-                    <strong>MSE to mean training digit:</strong> <code>3.5e-4</code> after Epoch 1 $\to$ <code>1.2e-4</code> after Epoch 5.
-                </p>
-
-                <figure style="margin-bottom: 16px;">
-                    <div class="img-wrap wide zoom-wrap">
-                        <img src="images/partb/denoise_pure_noise_loss.png" alt="Pure noise denoiser training loss curve">
-                    </div>
-                    <figcaption>Pure-noise denoiser training loss over 5 epochs.</figcaption>
-                </figure>
-
-                <div class="interactive-only">
-                    <div class="controls-bar">
-                        <button class="btn" type="button" id="btn-highlight-mean">Highlight Mean Training Digit Tile</button>
-                    </div>
-                </div>
-
-                <div class="img-grid cols-2">
-                    <figure>
-                        <div class="img-wrap auto-ratio overlay-frame-wrap">
-                            <img src="images/partb/pure_noise_epoch1_crop.png" alt="Pure noise denoiser outputs after epoch 1">
-                            <div class="mean-tile-ring"></div>
-                        </div>
-                        <figcaption>Pure-Noise Outputs · Epoch 1 (MSE to mean digit: $3.5\times 10^{-4}$)</figcaption>
-                    </figure>
-                    <figure>
-                        <div class="img-wrap auto-ratio overlay-frame-wrap">
-                            <img src="images/partb/pure_noise_epoch5_crop.png" alt="Pure noise denoiser outputs after epoch 5">
-                            <div class="mean-tile-ring"></div>
-                        </div>
-                        <figcaption>Pure-Noise Outputs · Epoch 5 (MSE to mean digit: $1.2\times 10^{-4}$)</figcaption>
-                    </figure>
-                </div>
-
-                <div class="observation">
-                    <strong>Why Outputs Collapse to the Dataset Centroid:</strong> <span data-cfg-text="obsB123">All outputs look like the same blurry, ghost-like composite digit regardless of the input noise tensor. Because pure Gaussian noise $\epsilon$ is statistically independent of the target digit $x$, the conditional expectation minimizing $\mathbb{E}[\|f_\theta(\epsilon) - x\|_2^2]$ is the unconditional dataset mean $\mathbb{E}[x]$ (the centroid of all training digits). The MSE against the mean digit shrinking from $3.5\times 10^{-4}$ (Epoch 1) to $1.2\times 10^{-4}$ (Epoch 5) confirms this convergence and motivates iterative flow matching.</span>
-                </div>
-            </article>
-        </section>
-
-        <!-- B.2 Training a Flow Matching Model -->
-        <section class="part-b-sec" id="b-sec-2">
-            <div class="section-heading">
-                <h3>B.2 Training a Flow Matching Model</h3>
-                <span>Sections 2.1 – 2.6 &amp; Scheduler Ablation</span>
-            </div>
-
-            <!-- B 2.1 - 2.3 Time-Conditioned Flow Matching -->
-            <article class="subsection" id="b-2-1">
-                <div class="subsection-header">
-                    <h4>B 2
+  <article class="subsection" id="b-nosched">
+    <div class="subsection-header">
+      <h4>B 2.6 Extension: Removing the Learning Rate Scheduler</h4>
+      <span class="sub-num">Constant LR Ablation</span>
+    </div>
+    <p>
+      To test whether the exponential scheduler is necessary, we train an
+      <em>independent</em> class-conditioned model for the same ten epochs,
+      batch size 64, width $D=64$, 10% class dropout, and 300-step CFG sampling.
+      We remove <code>ExponentialLR</code> entirely and lower the constant Adam
+      learning rate from $10^{-2}$ to $2\times10^{-3}$. This avoids holding
+      the larger original learning rate constant through the final epochs.
+      Both runs use seed 180 for comparable epoch-10 sample grids.
+    </p>
+    <div class="b-figure-grid b-one">
+      <figure>
+        <div class="b-image-frame"><a href="images/class_no_scheduler_loss.png" target="_blank" rel="noopener"><img src="images/class_no_scheduler_loss.png" alt="Class conditioned model training loss with a constant learning rate and no learning rate scheduler"></a></div>
+        <figcaption>No-scheduler training MSE ($\mathrm{lr}=2\times10^{-3}$, constant for 10 epochs).</figcaption>
+      </figure>
+    </div>
+    <div class="b-figure-grid">
+      <figure>
+        <div class="b-image-frame"><a href="images/class_epoch10.png" target="_blank" rel="noopener"><img src="images/class_epoch10.png" alt="Epoch ten class conditional generated digits with exponential learning rate scheduler"></a></div>
+        <figcaption>With exponential scheduler &middot; Epoch 10 · LR starts at $10^{-2}$</figcaption>
+      </figure>
+      <figure>
+        <div class="b-image-frame"><a href="images/class_no_scheduler_epoch10.png" target="_blank" rel="noopener"><img src="images/class_no_scheduler_epoch10.png" alt="Epoch ten class conditional generated digits with constant learning rate and no scheduler"></a></div>
+        <figcaption>Without scheduler &middot; Epoch 10 · Constant LR $2\times10^{-3}$</figcaption>
+      </figure>
+    </div>
+    <div class="observation">
+      <strong>What changed and what happened:</strong> Removing the scheduler
+      was compensated for by selecting a smaller constant LR, $2\times10^{-3}$,
+      while keeping the architecture, ten-epoch budget, CFG scale, and number
+      of Euler steps unchanged. The no-scheduler results remain legible and
+      largely preserve class correctness, visually similar to the scheduled
+      epoch-10 samples. This is a qualitative comparison: no held-out FID,
+      accuracy score, or quantitative image-quality benchmark was computed.
+    </div>
+  </article>
+</section>
+<!-- END PART B -->
