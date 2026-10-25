@@ -1,0 +1,30 @@
+[
+  {
+    "image": "rectify1.jpg",
+    "method": "nearest",
+    "median_seconds": 0.06567841399987628,
+    "height": 1199,
+    "width": 800
+  },
+  {
+    "image": "rectify1.jpg",
+    "method": "bilinear",
+    "median_seconds": 0.1902312360000451,
+    "height": 1199,
+    "width": 800
+  },
+  {
+    "image": "rectify2.jpg",
+    "method": "nearest",
+    "median_seconds": 0.05444341599991276,
+    "height": 1066,
+    "width": 800
+  },
+  {
+    "image": "rectify2.jpg",
+    "method": "bilinear",
+    "median_seconds": 0.16435542499993971,
+    "height": 1066,
+    "width": 800
+  }
+]

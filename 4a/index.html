@@ -1,0 +1,272 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Project 04A · Image Warping &amp; Mosaicing · CS 180</title><meta name="description" content="Kelvin Lim explores homographies, inverse warping, image rectification, and manually aligned mosaics for CS180 Project 4A."><link rel="stylesheet" href="styles.css"></head><body><a class="skip" href="#a1">Skip to project content</a><main class="page-shell"><div class="topline"><a class="mark" href="../index.html">CS 180 portfolio</a><span>Project 04 · Part A</span><a href="../index.html">← All Projects</a></div><div class="student-banner"><span><strong>Student:</strong> Kelvin Lim</span><span>CS 180 · UC Berkeley · Fall 2026</span></div><header class="intro" id="top"><div class="eyebrow">Programming Project #4 · Part A</div><h1>Image Warping<br>&amp; Mosaicing.</h1><p>From matching a few points to combining two views. I built homography estimation and image warping from scratch, then tried them on rectifying flat objects and stitching my own photographs.</p><div class="stats"><span><strong>3</strong> mosaic pairs</span><span><strong>10</strong> matches per pair</span><span><strong>2</strong> rectification examples</span><span><strong>2</strong> handwritten interpolators</span></div></header>
+<figure class="hero-figure"><a class="image-link" href="images/mosaic3_final.png" target="_blank" rel="noopener" aria-label="Open full-size image: A wider view of an indoor stairwell landing, assembled with a homography and feathered blending."><img src="images/mosaic3_final.png" alt="A wider view of an indoor stairwell landing, assembled with a homography and feathered blending." width="2085" height="1109" loading="eager"></a><figcaption>A wider view of an indoor stairwell landing, assembled with a homography and feathered blending.</figcaption></figure>
+<nav class="toc-bar" aria-label="Project sections"><a href="#a1">A.1 · Photographs</a><a href="#a2">A.2 · Homographies</a><a href="#a3">A.3 · Rectification</a><a href="#a4">A.4 · Mosaics</a><a href="#takeaways">What I learned</a><a href="#code">Code &amp; data</a></nav>
+<section class="section" id="a1"><div class="section-heading"><div class="eyebrow">A.1 · Shoot the pictures</div><h2>Starting with overlapping views</h2><p>Three image pairs, captured by rotating my phone from left to right.</p></div>
+<p>I took these photographs myself. For each mosaic pair, I stayed in one place and rotated my phone from left to right, keeping shared features visible in both images. My goal was to keep the camera center approximately fixed while changing its viewing direction. Staying in one place does not guarantee zero camera translation, so small movement could still affect the alignment.</p><p>The first two pairs are nighttime outdoor scenes. For my final third pair, I used an indoor stairwell with a framed artwork. I used working copies resized to a maximum side length of 1200 pixels, so all point coordinates and errors on this page refer to those copies.</p>
+<h3>Pair 1: Café entrance</h3>
+<div class="figure-grid cols-2"><figure class=""><a class="image-link" href="images/mosaic1_left_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 1 · Left source image"><img src="images/mosaic1_left_working.png" alt="Pair 1 · Left source image" width="1200" height="675" loading="lazy"></a><figcaption>Pair 1 · Left source image</figcaption></figure><figure class=""><a class="image-link" href="images/mosaic1_right_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 1 · Right reference image"><img src="images/mosaic1_right_working.png" alt="Pair 1 · Right reference image" width="1200" height="675" loading="lazy"></a><figcaption>Pair 1 · Right reference image</figcaption></figure></div>
+<h3>Pair 2: Building and outdoor patio</h3>
+<div class="figure-grid cols-2"><figure class=""><a class="image-link" href="images/mosaic2_left_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 2 · Left source image"><img src="images/mosaic2_left_working.png" alt="Pair 2 · Left source image" width="1200" height="675" loading="lazy"></a><figcaption>Pair 2 · Left source image</figcaption></figure><figure class=""><a class="image-link" href="images/mosaic2_right_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 2 · Right reference image"><img src="images/mosaic2_right_working.png" alt="Pair 2 · Right reference image" width="1200" height="675" loading="lazy"></a><figcaption>Pair 2 · Right reference image</figcaption></figure></div>
+<h3>Pair 3: Indoor stairwell and framed artwork</h3>
+<div class="figure-grid cols-2"><figure class=""><a class="image-link" href="images/mosaic3_left_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 3 · Left source image"><img src="images/mosaic3_left_working.png" alt="Pair 3 · Left source image" width="1200" height="675" loading="lazy"></a><figcaption>Pair 3 · Left source image</figcaption></figure><figure class=""><a class="image-link" href="images/mosaic3_right_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 3 · Right reference image"><img src="images/mosaic3_right_working.png" alt="Pair 3 · Right reference image" width="1200" height="675" loading="lazy"></a><figcaption>Pair 3 · Right reference image</figcaption></figure></div>
+</section>
+<section class="section" id="a2"><div class="section-heading"><div class="eyebrow">A.2 · Recover homographies</div><h2>Matching points to a shared view</h2><p>An eight-parameter transformation estimated from ten manually selected point pairs.</p></div>
+<p>I clicked 10 corresponding features in each image pair, keeping their order the same in both images. Each match represents the same physical feature, even though its pixel coordinates differ. The right image is the reference.</p><p>I implemented computeH(im1_pts, im2_pts) by building a linear system and solving it with NumPy least squares. I did not use a built-in homography estimator. Each correspondence supplies two equations, so 10 matches produce 20 equations for 8 unknowns.</p>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>λ</mi><mrow><mo>[</mo><mtable><mtr><mtd><mi>u</mi></mtd></mtr><mtr><mtd><mi>v</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><msub><mi>h</mi><mi>11</mi></msub></mtd><mtd><msub><mi>h</mi><mi>12</mi></msub></mtd><mtd><msub><mi>h</mi><mi>13</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>21</mi></msub></mtd><mtd><msub><mi>h</mi><mi>22</mi></msub></mtd><mtd><msub><mi>h</mi><mi>23</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>31</mi></msub></mtd><mtd><msub><mi>h</mi><mi>32</mi></msub></mtd><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow><mrow><mo>[</mo><mtable><mtr><mtd><mi>x</mi></mtd></mtr><mtr><mtd><mi>y</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+<h3>Building the system: Ah = b</h3>
+<p>For a source point (x, y) and its target (u, v), I divide the transformed homogeneous coordinates by their third component, then rearrange the two equations. One match contributes the following rows:</p>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo>[</mo><mtable><mtr><mtd><mi>x</mi></mtd><mtd><mi>y</mi></mtd><mtd><mn>1</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mo>−</mo><mi>u</mi><mi>x</mi></mtd><mtd><mo>−</mo><mi>u</mi><mi>y</mi></mtd></mtr><mtr><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mi>x</mi></mtd><mtd><mi>y</mi></mtd><mtd><mn>1</mn></mtd><mtd><mo>−</mo><mi>v</mi><mi>x</mi></mtd><mtd><mo>−</mo><mi>v</mi><mi>y</mi></mtd></mtr></mtable><mo>]</mo></mrow><mrow><mo>[</mo><mtable><mtr><mtd><msub><mi>h</mi><mi>11</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>12</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>13</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>21</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>22</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>23</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>31</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>32</mi></msub></mtd></mtr></mtable><mo>]</mo></mrow><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mi>u</mi></mtd></mtr><mtr><mtd><mi>v</mi></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+<p>Stacking all the rows gives A with shape 20 × 8 and b with length 20. I solve for the vector h that minimizes the squared residual ||Ah − b||², then reshape its eight entries into H and set the bottom-right entry to 1. Before solving, I center and scale both point sets so their mean distance from the origin is √2. This improves numerical conditioning. I then convert the estimated matrix back to the working-image coordinates.</p>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><msup><msub><mi>T</mi><mi>dst</mi></msub><mrow><mo>−</mo><mn>1</mn></mrow></msup><msub><mi>H</mi><mi>n</mi></msub><msub><mi>T</mi><mi>src</mi></msub></math></div>
+<p>The matrices below map <strong>left source → right reference</strong>. The displayed entries are rounded; the downloadable text files retain more precision.</p>
+<article><h3>Pair 1: Café entrance</h3>
+<figure class=""><a class="image-link" href="images/mosaic1_correspondences.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 1 · Ten numbered correspondences. Each line connects matching features."><img src="images/mosaic1_correspondences.png" alt="Pair 1 · Ten numbered correspondences. Each line connects matching features." width="2385" height="723" loading="lazy"></a><figcaption>Pair 1 · Ten numbered correspondences. Each line connects matching features.</figcaption></figure>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mn>1.58682603</mn></mtd><mtd><mn>-0.19147152</mn></mtd><mtd><mn>-465.10013665</mn></mtd></mtr><mtr><mtd><mn>0.31380262</mn></mtd><mtd><mn>1.36378621</mn></mtd><mtd><mn>-258.24132976</mn></mtd></mtr><mtr><mtd><mn>0.00049336</mn></mtd><mtd><mn>-0.00000923</mn></mtd><mtd><mn>1.00000000</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+<p class="small"><a href="data/mosaic1_H.txt">Download H</a> · <a href="data/mosaic1_system.npz">Download raw and normalized systems (.npz)</a></p>
+<details><summary>Reprojection check: RMSE 4.640 px · Maximum 6.612 px</summary>
+<figure class=""><a class="image-link" href="images/mosaic1_reprojection.png" target="_blank" rel="noopener" aria-label="Open full-size image: Clicked target points and projected source points in the right image."><img src="images/mosaic1_reprojection.png" alt="Clicked target points and projected source points in the right image." width="1192" height="715" loading="lazy"></a><figcaption>Clicked target points and projected source points in the right image.</figcaption></figure>
+<div class="table-wrap"><table><thead><tr><th scope="col">Point</th><th scope="col">Forward error (pixels)</th></tr></thead><tbody><tr><td>1</td><td>5.360</td></tr><tr><td>2</td><td>0.986</td></tr><tr><td>3</td><td>6.612</td></tr><tr><td>4</td><td>1.794</td></tr><tr><td>5</td><td>6.247</td></tr><tr><td>6</td><td>1.825</td></tr><tr><td>7</td><td>4.744</td></tr><tr><td>8</td><td>3.683</td></tr><tr><td>9</td><td>6.175</td></tr><tr><td>10</td><td>4.702</td></tr></tbody></table></div>
+</details></article>
+<article><h3>Pair 2: Building and outdoor patio</h3>
+<figure class=""><a class="image-link" href="images/mosaic2_correspondences.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 2 · Ten numbered correspondences. Each line connects matching features."><img src="images/mosaic2_correspondences.png" alt="Pair 2 · Ten numbered correspondences. Each line connects matching features." width="2385" height="723" loading="lazy"></a><figcaption>Pair 2 · Ten numbered correspondences. Each line connects matching features.</figcaption></figure>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mn>1.37540963</mn></mtd><mtd><mn>-0.14485482</mn></mtd><mtd><mn>-285.71590107</mn></mtd></mtr><mtr><mtd><mn>0.16947448</mn></mtd><mtd><mn>1.16713838</mn></mtd><mtd><mn>-103.42373770</mn></mtd></mtr><mtr><mtd><mn>0.00033056</mn></mtd><mtd><mn>-0.00007674</mn></mtd><mtd><mn>1.00000000</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+<p class="small"><a href="data/mosaic2_H.txt">Download H</a> · <a href="data/mosaic2_system.npz">Download raw and normalized systems (.npz)</a></p>
+<details><summary>Reprojection check: RMSE 2.695 px · Maximum 4.637 px</summary>
+<figure class=""><a class="image-link" href="images/mosaic2_reprojection.png" target="_blank" rel="noopener" aria-label="Open full-size image: Clicked target points and projected source points in the right image."><img src="images/mosaic2_reprojection.png" alt="Clicked target points and projected source points in the right image." width="1192" height="715" loading="lazy"></a><figcaption>Clicked target points and projected source points in the right image.</figcaption></figure>
+<div class="table-wrap"><table><thead><tr><th scope="col">Point</th><th scope="col">Forward error (pixels)</th></tr></thead><tbody><tr><td>1</td><td>1.164</td></tr><tr><td>2</td><td>0.514</td></tr><tr><td>3</td><td>2.951</td></tr><tr><td>4</td><td>3.073</td></tr><tr><td>5</td><td>2.882</td></tr><tr><td>6</td><td>2.070</td></tr><tr><td>7</td><td>3.468</td></tr><tr><td>8</td><td>2.447</td></tr><tr><td>9</td><td>4.637</td></tr><tr><td>10</td><td>0.869</td></tr></tbody></table></div>
+</details></article>
+<article><h3>Pair 3: Indoor stairwell and framed artwork</h3>
+<figure class=""><a class="image-link" href="images/mosaic3_correspondences.png" target="_blank" rel="noopener" aria-label="Open full-size image: Pair 3 · Ten numbered correspondences. Each line connects matching features."><img src="images/mosaic3_correspondences.png" alt="Pair 3 · Ten numbered correspondences. Each line connects matching features." width="2385" height="723" loading="lazy"></a><figcaption>Pair 3 · Ten numbered correspondences. Each line connects matching features.</figcaption></figure>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mn>2.02578826</mn></mtd><mtd><mn>-0.02743918</mn></mtd><mtd><mn>-884.49763947</mn></mtd></mtr><mtr><mtd><mn>0.33967944</mn></mtd><mtd><mn>1.67037360</mn></mtd><mtd><mn>-270.85333446</mn></mtd></mtr><mtr><mtd><mn>0.00082146</mn></mtd><mtd><mn>0.00003316</mn></mtd><mtd><mn>1.00000000</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+<p class="small"><a href="data/mosaic3_H.txt">Download H</a> · <a href="data/mosaic3_system.npz">Download raw and normalized systems (.npz)</a></p>
+<details><summary>Reprojection check: RMSE 3.267 px · Maximum 5.761 px</summary>
+<figure class=""><a class="image-link" href="images/mosaic3_reprojection.png" target="_blank" rel="noopener" aria-label="Open full-size image: Clicked target points and projected source points in the right image."><img src="images/mosaic3_reprojection.png" alt="Clicked target points and projected source points in the right image." width="1192" height="715" loading="lazy"></a><figcaption>Clicked target points and projected source points in the right image.</figcaption></figure>
+<div class="table-wrap"><table><thead><tr><th scope="col">Point</th><th scope="col">Forward error (pixels)</th></tr></thead><tbody><tr><td>1</td><td>0.958</td></tr><tr><td>2</td><td>5.761</td></tr><tr><td>3</td><td>0.614</td></tr><tr><td>4</td><td>3.059</td></tr><tr><td>5</td><td>3.910</td></tr><tr><td>6</td><td>1.282</td></tr><tr><td>7</td><td>1.795</td></tr><tr><td>8</td><td>2.405</td></tr><tr><td>9</td><td>4.022</td></tr><tr><td>10</td><td>4.562</td></tr></tbody></table></div>
+</details></article>
+<div class="observation"><span class="mini-label">What I noticed</span><p>I checked how far each transformed source point landed from its clicked target. The RMSE values were 4.640, 2.695, and 3.267 pixels for pairs 1, 2, and 3. These are fitting errors on the selected matches, not a score for the whole mosaic. Even if those points are close, other details can still disagree because of inaccurate clicks, reflections, or camera movement.</p></div>
+<details><summary>Inspect the homography implementation</summary><pre><code>def build_system(source, destination):
+    #place each correspondence into two rows of the eight-unknown system
+    source = np.asarray(source, dtype=np.float64)
+    destination = np.asarray(destination, dtype=np.float64)
+    x, y = source.T
+    u, v = destination.T
+    A = np.zeros((2 * len(source), 8), dtype=np.float64)
+    b = np.empty(2 * len(source), dtype=np.float64)
+    A[0::2, :3] = np.column_stack([x, y, np.ones(len(x))])
+    A[1::2, 3:6] = np.column_stack([x, y, np.ones(len(x))])
+    A[0::2, 6:] = -np.column_stack([u * x, u * y])
+    A[1::2, 6:] = -np.column_stack([v * x, v * y])
+    b[0::2], b[1::2] = u, v
+    return A, b
+
+
+def transform_points(points, H):
+    #multiply homogeneous coordinates and divide by the projective denominator
+    points = np.asarray(points, dtype=np.float64)
+    homogeneous = np.column_stack([points, np.ones(len(points))])
+    mapped = homogeneous @ np.asarray(H, dtype=np.float64).T
+    if np.any(np.abs(mapped[:, 2]) &lt; 1e-12):
+        raise ValueError(&#x27;A point maps to infinity. Check the homography and selections.&#x27;)
+    result = mapped[:, :2] / mapped[:, 2, None]
+    if not np.isfinite(result).all():
+        raise ValueError(&#x27;Nonfinite transformed coordinates.&#x27;)
+    return result
+
+
+def normalize_points(points):
+    center = points.mean(axis=0)
+    mean_distance = np.linalg.norm(points - center, axis=1).mean()
+    if mean_distance &lt; 1e-12:
+        raise ValueError(&#x27;The points have insufficient spatial spread.&#x27;)
+    scale = np.sqrt(2) / mean_distance
+    T = np.array([[scale, 0, -scale * center[0]],
+                  [0, scale, -scale * center[1]], [0, 0, 1]], dtype=np.float64)
+    return transform_points(points, T), T
+
+
+def computeH(im1_pts, im2_pts):
+    #estimate a mapping from im1 coordinates to im2 coordinates
+    source = np.asarray(im1_pts, dtype=np.float64)
+    destination = np.asarray(im2_pts, dtype=np.float64)
+    if source.ndim != 2 or source.shape[1] != 2 or source.shape != destination.shape or len(source) &lt; 4:
+        raise ValueError(&#x27;Both point arrays must have matching shape (n, 2), with n &gt;= 4.&#x27;)
+    if not np.isfinite(source).all() or not np.isfinite(destination).all():
+        raise ValueError(&#x27;Point coordinates must be finite.&#x27;)
+    src_n, T_src = normalize_points(source)
+    dst_n, T_dst = normalize_points(destination)
+    A, b = build_system(src_n, dst_n)
+    h, residuals, rank, singular_values = np.linalg.lstsq(A, b, rcond=None)
+    if rank &lt; 8:
+        raise ValueError(&#x27;Degenerate correspondences: spread points across a two-dimensional region.&#x27;)
+    H_n = np.append(h, 1.0).reshape(3, 3)
+    H = np.linalg.inv(T_dst) @ H_n @ T_src
+    if abs(H[2, 2]) &lt; 1e-12 or np.linalg.matrix_rank(H) &lt; 3:
+        raise ValueError(&#x27;Cannot normalize a nonsingular homography from these points.&#x27;)
+    H /= H[2, 2]
+    return H</code></pre></details>
+</section>
+<section class="section" id="a3"><div class="section-heading"><div class="eyebrow">A.3 · Warp the images</div><h2>Making an angled rectangle face forward</h2><p>Inverse warping with nearest neighbor and bilinear interpolation, both implemented from scratch.</p></div>
+<p>I wrote warpImageNearestNeighbor(im, H) and warpImageBilinear(im, H), with a shared inverse-warping routine. For each output pixel, I apply H inverse to find its location in the source image, divide by the homogeneous coordinate, and sample its color. This avoids the holes that can occur when forward-mapped pixels miss output positions.</p><p>I treat integer coordinates as pixel centers, with (0, 0) at the top-left pixel center. For full image warps, I transform the four corners to find the output bounds. For rectification, I sample directly into the target rectangle rather than allocating a large warped background. Invalid source locations are excluded using a mask.</p>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo>[</mo><mtable><mtr><mtd><mi>x</mi></mtd></mtr><mtr><mtd><mi>y</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow><mo>∼</mo><msup><mi>H</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mrow><mo>[</mo><mtable><mtr><mtd><mi>u</mi></mtd></mtr><mtr><mtd><mi>v</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+<h3>Two ways to sample the source</h3>
+<div class="table-wrap"><table><thead><tr><th scope="col">Method</th><th scope="col">Implementation</th><th scope="col">Expected trade-off</th></tr></thead><tbody><tr><td>Nearest neighbor</td><td>Round each valid coordinate using floor(value + 0.5), then read one source pixel.</td><td>Fast, but can produce blocky or jagged edges.</td></tr><tr><td>Bilinear</td><td>Use the four neighboring pixels, weighted by the fractional x and y offsets.</td><td>Smoother edges, with more computation and some softening.</td></tr></tbody></table></div>
+<p>For bilinear interpolation, I set x₀ = floor(x), y₀ = floor(y), a = x − x₀, and b = y − y₀. The upper neighbors are x₁ = min(x₀ + 1, W − 1) and y₁ = min(y₀ + 1, H − 1). Clamping the upper neighbor keeps valid border pixels instead of discarding the last row or column.</p>
+<div class="math-box"><div>I(x, y) = (1 − a)(1 − b) I[y₀, x₀] + a(1 − b) I[y₀, x₁]<br>　　　　 + (1 − a)b I[y₁, x₀] + ab I[y₁, x₁]</div></div>
+<p>No library interpolation or high-level perspective-warp functions are used for these steps.</p>
+<h3>Rectification 1: Framed painting</h3>
+<p>I selected corners in the order top left, top right, bottom right, bottom left. I mapped them to (0, 0), (799, 0), (799, 1198), and (0, 1198). The assumed width-to-height ratio is <strong>2:3</strong>, giving a 800 × 1199 output. These proportions were not physically measured.</p>
+<div class="figure-grid cols-3"><figure class="portrait"><a class="image-link" href="images/rectify1_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Framed painting · Original working image"><img src="images/rectify1_working.png" alt="Framed painting · Original working image" width="675" height="1200" loading="lazy"></a><figcaption>Framed painting · Original working image</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify1_nearest.png" target="_blank" rel="noopener" aria-label="Open full-size image: Framed painting · Nearest neighbor"><img src="images/rectify1_nearest.png" alt="Framed painting · Nearest neighbor" width="800" height="1199" loading="lazy"></a><figcaption>Framed painting · Nearest neighbor</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify1_bilinear.png" target="_blank" rel="noopener" aria-label="Open full-size image: Framed painting · Bilinear"><img src="images/rectify1_bilinear.png" alt="Framed painting · Bilinear" width="800" height="1199" loading="lazy"></a><figcaption>Framed painting · Bilinear</figcaption></figure></div>
+<div class="observation"><span class="mini-label">What I noticed</span><p>For my first example, I used a photo of a framed painting taken from the side. I selected its four corners and mapped them to a rectangle with an assumed width-to-height ratio of 2:3. The output was 800 × 1199 pixels.</p><p>The change is easy to see when comparing the original and rectified images. In the original, the frame looks slanted because of the camera angle. After warping, its sides look vertical and its top and bottom look horizontal. The painting looks more like I photographed it from directly in front. However, since I assumed the aspect ratio, I cannot be sure that its proportions exactly match the real painting.</p></div>
+<details><summary>Inspect selected corners and the rectification homography</summary>
+<div class="figure-grid cols-2"><figure class="portrait"><a class="image-link" href="images/rectify1_corners.png" target="_blank" rel="noopener" aria-label="Open full-size image: Framed painting · Selected corner order"><img src="images/rectify1_corners.png" alt="Framed painting · Selected corner order" width="578" height="1045" loading="lazy"></a><figcaption>Framed painting · Selected corner order</figcaption></figure><div><div class="table-wrap"><table><thead><tr><th scope="col">Corner</th><th scope="col">Source (x, y)</th><th scope="col">Destination (u, v)</th></tr></thead><tbody><tr><td>1</td><td>(200.00, 13.97)</td><td>(0, 0)</td></tr><tr><td>2</td><td>(497.00, 350.97)</td><td>(799, 0)</td></tr><tr><td>3</td><td>(524.00, 824.97)</td><td>(799, 1198)</td></tr><tr><td>4</td><td>(25.00, 1044.97)</td><td>(0, 1198)</td></tr></tbody></table></div></div></div>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mn>0.80583031</mn></mtd><mtd><mn>0.13678012</mn></mtd><mtd><mn>-163.07670967</mn></mtd></mtr><mtr><mtd><mn>-1.42753585</mn></mtd><mtd><mn>1.25809539</mn></mtd><mtd><mn>267.93314906</mn></mtd></mtr><mtr><mtd><mn>-0.00151573</mn></mtd><mtd><mn>0.00031498</mn></mtd><mtd><mn>1.00000000</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+</details>
+<h3>Rectification 2: Berkeley parking sign</h3>
+<p>I selected corners in the order top left, top right, bottom right, bottom left. I mapped them to (0, 0), (799, 0), (799, 1065), and (0, 1065). The assumed width-to-height ratio is <strong>3:4</strong>, giving a 800 × 1066 output. These proportions were not physically measured.</p>
+<div class="figure-grid cols-3"><figure class="portrait"><a class="image-link" href="images/rectify2_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Berkeley parking sign · Original working image"><img src="images/rectify2_working.png" alt="Berkeley parking sign · Original working image" width="675" height="1200" loading="lazy"></a><figcaption>Berkeley parking sign · Original working image</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify2_nearest.png" target="_blank" rel="noopener" aria-label="Open full-size image: Berkeley parking sign · Nearest neighbor"><img src="images/rectify2_nearest.png" alt="Berkeley parking sign · Nearest neighbor" width="800" height="1066" loading="lazy"></a><figcaption>Berkeley parking sign · Nearest neighbor</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify2_bilinear.png" target="_blank" rel="noopener" aria-label="Open full-size image: Berkeley parking sign · Bilinear"><img src="images/rectify2_bilinear.png" alt="Berkeley parking sign · Bilinear" width="800" height="1066" loading="lazy"></a><figcaption>Berkeley parking sign · Bilinear</figcaption></figure></div>
+<div class="observation"><span class="mini-label">What I noticed</span><p>For the second example, I used a photo of a Berkeley parking sign. I selected the corners of its front face and used an assumed width-to-height ratio of 3:4. This produced an output of 800 × 1066 pixels.</p><p>The top and bottom of the sign slope in the original photo. After rectification, they look more horizontal, and the text looks more level. This helped me see how mapping the four corners to a rectangle can correct the perspective of a flat object.</p></div>
+<details><summary>Inspect selected corners and the rectification homography</summary>
+<div class="figure-grid cols-2"><figure class="portrait"><a class="image-link" href="images/rectify2_corners.png" target="_blank" rel="noopener" aria-label="Open full-size image: Berkeley parking sign · Selected corner order"><img src="images/rectify2_corners.png" alt="Berkeley parking sign · Selected corner order" width="590" height="1050" loading="lazy"></a><figcaption>Berkeley parking sign · Selected corner order</figcaption></figure><div><div class="table-wrap"><table><thead><tr><th scope="col">Corner</th><th scope="col">Source (x, y)</th><th scope="col">Destination (u, v)</th></tr></thead><tbody><tr><td>1</td><td>(195.00, 407.02)</td><td>(0, 0)</td></tr><tr><td>2</td><td>(469.00, 439.02)</td><td>(799, 0)</td></tr><tr><td>3</td><td>(466.00, 699.02)</td><td>(799, 1065)</td></tr><tr><td>4</td><td>(197.00, 743.02)</td><td>(0, 1065)</td></tr></tbody></table></div></div></div>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mn>1.89982983</mn></mtd><mtd><mn>-0.01130851</mn></mtd><mtd><mn>-365.86407582</mn></mtd></mtr><mtr><mtd><mn>-0.30586774</mn></mtd><mtd><mn>2.61899249</mn></mtd><mtd><mn>-1006.32665709</mn></mtd></mtr><mtr><mtd><mn>-0.00069756</mn></mtd><mtd><mn>-0.00004964</mn></mtd><mtd><mn>1.00000000</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
+</details>
+<h3>Looking closer: interpolation quality</h3>
+<div class="figure-grid cols-2"><figure class=""><a class="image-link" href="images/rectify1_detail.png" target="_blank" rel="noopener" aria-label="Open full-size image: Painting detail · Nearest neighbor on the left, bilinear on the right."><img src="images/rectify1_detail.png" alt="Painting detail · Nearest neighbor on the left, bilinear on the right." width="1562" height="807" loading="lazy"></a><figcaption>Painting detail · Nearest neighbor on the left, bilinear on the right.</figcaption></figure><figure class=""><a class="image-link" href="images/rectify2_detail.png" target="_blank" rel="noopener" aria-label="Open full-size image: Sign detail · Nearest neighbor on the left, bilinear on the right."><img src="images/rectify2_detail.png" alt="Sign detail · Nearest neighbor on the left, bilinear on the right." width="1562" height="807" loading="lazy"></a><figcaption>Sign detail · Nearest neighbor on the left, bilinear on the right.</figcaption></figure></div>
+<div class="observation"><span class="mini-label">What I noticed</span><p>At first, the two interpolation results looked quite similar when I viewed the whole rectified image. The differences became much clearer in the enlarged crops.</p><p>For the painting, I looked at the diagonal edge of the red coat and where it meets the lighter clothing. Nearest neighbor creates noticeable pixel steps along these edges. Bilinear makes the transitions smoother, but the details also look slightly softer.</p><p>The difference is especially clear in the parking sign’s letters. Nearest neighbor makes their outlines look blocky and jagged. Bilinear smooths the outlines, although the letters look blurrier.</p><p>From these comparisons, I found that nearest neighbor preserves sharper pixel boundaries, while bilinear gives a smoother appearance. The sharper-looking pixels in nearest neighbor do not mean that it recovers more detail from the original photo.</p></div>
+<h3>Speed comparison</h3><p>I used one warmup and three timed runs per method, then recorded the median. Each pair of methods uses the same output dimensions. The measurements exclude loading, plotting, and exporting.</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Image</th><th scope="col">Output size</th><th scope="col">Nearest neighbor</th><th scope="col">Bilinear</th><th scope="col">Bilinear / nearest</th></tr></thead><tbody><tr><td>Rectification 1</td><td>800 × 1199</td><td>0.0657 s</td><td>0.1902 s</td><td>2.9×</td></tr><tr><td>Rectification 2</td><td>800 × 1066</td><td>0.0544 s</td><td>0.1644 s</td><td>3.0×</td></tr></tbody></table></div>
+<p>In my final exported run, bilinear took about 2.9 times as long for the painting and 3.0 times as long for the sign. It needs four pixel values and a weighted average instead of one pixel lookup. Both methods finished in less than a quarter of a second per warp, so the extra waiting time was small for these examples. I would choose bilinear when I prefer smoother edges. These timings may vary between runs.</p>
+<h3>Limitations and what I learned</h3><p>I assumed the aspect ratios of both objects instead of measuring them. This means that making the outlines rectangular does not guarantee that the objects have their correct physical proportions. They could still be slightly stretched or compressed.</p><p>Selecting the corners accurately also matters. A small difference in where I click can change the homography and the final alignment.</p><p>The painting still has glare and reflections, and the parking sign still has strong colored lighting. Warping changes where pixels appear, but it does not remove these effects. I also noticed that enlarging the objects cannot create detail that was missing from the original photos. Bilinear can make the result smoother, but it cannot make the original details clearer.</p>
+<details><summary>Inspect inverse warping and both interpolation implementations</summary><pre><code>def sample_pixels(image, x, y, method):
+    #sample only geometrically valid coordinates and keep a separate validity mask
+    if method not in (&#x27;nearest&#x27;, &#x27;bilinear&#x27;):
+        raise ValueError(&#x27;Unknown interpolation method.&#x27;)
+    height, width = image.shape[:2]
+    tolerance = 1e-7
+    valid = np.isfinite(x) &amp; np.isfinite(y)
+    valid &amp;= (x &gt;= -tolerance) &amp; (x &lt;= width - 1 + tolerance)
+    valid &amp;= (y &gt;= -tolerance) &amp; (y &lt;= height - 1 + tolerance)
+    values = np.zeros((len(x), image.shape[2]), dtype=np.float32)
+    if not valid.any():
+        return values, valid
+    xv = np.clip(x[valid], 0, width - 1)
+    yv = np.clip(y[valid], 0, height - 1)
+    if method == &#x27;nearest&#x27;:
+        xi = np.floor(xv + 0.5).astype(np.int64)
+        yi = np.floor(yv + 0.5).astype(np.int64)
+        values[valid] = image[yi, xi]
+    else:
+        x0 = np.floor(xv).astype(np.int64)
+        y0 = np.floor(yv).astype(np.int64)
+        x1 = np.minimum(x0 + 1, width - 1)
+        y1 = np.minimum(y0 + 1, height - 1)
+        a = (xv - x0)[:, None]
+        b = (yv - y0)[:, None]
+        values[valid] = ((1 - a) * (1 - b) * image[y0, x0]
+                         + a * (1 - b) * image[y0, x1]
+                         + (1 - a) * b * image[y1, x0]
+                         + a * b * image[y1, x1])
+    return values, valid
+
+
+def warp_to_canvas(im, H, shape, origin, method=&#x27;bilinear&#x27;):
+    image = np.asarray(im, dtype=np.float32)
+    if image.ndim != 3 or image.shape[2] &lt; 1:
+        raise ValueError(&#x27;Expected an image of shape (height, width, channels).&#x27;)
+    out_h, out_w = (int(v) for v in shape)
+    if min(out_h, out_w) &lt;= 0 or out_h * out_w &gt; MAX_CANVAS_PIXELS:
+        raise ValueError(&#x27;Requested canvas exceeds the configured safety limit.&#x27;)
+    inverse = np.linalg.inv(np.asarray(H, dtype=np.float64))
+    result = np.zeros((out_h, out_w, image.shape[2]), dtype=np.float32)
+    mask = np.zeros((out_h, out_w), dtype=bool)
+    for start in range(0, out_h, TILE_ROWS):
+        stop = min(start + TILE_ROWS, out_h)
+        xx, yy = np.meshgrid(np.arange(out_w, dtype=np.float64) + origin[0],
+                             np.arange(start, stop, dtype=np.float64) + origin[1])
+        destination = np.stack([xx.ravel(), yy.ravel(), np.ones(xx.size)])
+        source = inverse @ destination
+        denominator = source[2]
+        finite = np.isfinite(denominator) &amp; (np.abs(denominator) &gt; 1e-12)
+        x = np.full(xx.size, np.nan)
+        y = np.full(xx.size, np.nan)
+        np.divide(source[0], denominator, out=x, where=finite)
+        np.divide(source[1], denominator, out=y, where=finite)
+        colors, valid = sample_pixels(image, x, y, method)
+        result[start:stop] = colors.reshape(stop - start, out_w, image.shape[2])
+        mask[start:stop] = valid.reshape(stop - start, out_w)
+    return result, mask
+
+
+def warpImageNearestNeighbor(im, H, return_metadata=False):
+    shape, origin = warp_bounds(im, H)
+    result, mask = warp_to_canvas(im, H, shape, origin, &#x27;nearest&#x27;)
+    return (result, mask, origin) if return_metadata else result
+
+
+def warpImageBilinear(im, H, return_metadata=False):
+    shape, origin = warp_bounds(im, H)
+    result, mask = warp_to_canvas(im, H, shape, origin, &#x27;bilinear&#x27;)
+    return (result, mask, origin) if return_metadata else result</code></pre></details>
+</section>
+<section class="section" id="a4"><div class="section-heading"><div class="eyebrow">A.4 · Blend into a mosaic</div><h2>Where two photographs meet</h2><p>Three mosaics with source images, overwrite baselines, and feathered results.</p></div>
+<p>I first warped the left image into the right image’s coordinate system and placed both on a shared canvas. The right image used the identity transform. To compare the effect of blending, I generated an overwrite baseline and a feathered result from the same alignment.</p><p>For feathering, I used distance from the nearest source-image edge to create a weight field. The code uses min(x + 1, W − x, y + 1, H − y), normalized by its maximum. Edge weights stay positive so that valid border pixels do not turn into holes. The validity mask sets weights to zero outside the source image. I warped this weight channel along with RGB.</p>
+<div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>M</mi><mo>(</mo><mi>p</mi><mo>)</mo><mo>=</mo><mfrac><mrow><msub><mi>w</mi><mi>L</mi></msub><msub><mi>I</mi><mi>L</mi></msub><mo>+</mo><msub><mi>w</mi><mi>R</mi></msub><msub><mi>I</mi><mi>R</mi></msub></mrow><mrow><msub><mi>w</mi><mi>L</mi></msub><mo>+</mo><msub><mi>w</mi><mi>R</mi></msub></mrow></mfrac></math></div>
+<p>At each pixel with a positive total weight, I divide the weighted color sum by the weight sum. Where only one image contributes, its color is preserved. Where neither contributes, the exported pixel stays transparent. Overwrite instead selects the right image wherever it is valid.</p>
+<p class="note">Move each comparison slider to inspect the same location under both methods. The left side shows overwrite; the right side shows feathering. Full-resolution versions open from the links below.</p>
+<article id="mosaic-1"><h3>Mosaic 1: Café entrance</h3>
+<div class="figure-grid cols-2"><figure class=""><a class="image-link" href="images/mosaic1_left_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 1 · Left source"><img src="images/mosaic1_left_working.png" alt="Mosaic 1 · Left source" width="1200" height="675" loading="lazy"></a><figcaption>Mosaic 1 · Left source</figcaption></figure><figure class=""><a class="image-link" href="images/mosaic1_right_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 1 · Right reference"><img src="images/mosaic1_right_working.png" alt="Mosaic 1 · Right reference" width="1200" height="675" loading="lazy"></a><figcaption>Mosaic 1 · Right reference</figcaption></figure></div>
+<div class="compare"><div class="compare-labels"><strong>Overwrite baseline</strong><strong>Feathered mosaic</strong></div><div class="compare-stage"><img src="images/mosaic1_final.png" width="1798" height="934" alt="Mosaic 1: final feathered result" loading="lazy"><img class="overlay" src="images/mosaic1_overwrite.png" width="1798" height="934" alt="Mosaic 1: overwrite comparison" loading="lazy"><span class="divider"></span></div><label for="compare-1">Comparison position</label><input id="compare-1" type="range" min="0" max="100" value="50" aria-label="Mosaic 1: reveal overwrite on the left and feathering on the right"><div class="links"><a href="images/mosaic1_overwrite.png" target="_blank" rel="noopener">Open overwrite</a> · <a href="images/mosaic1_final.png" target="_blank" rel="noopener">Open feathered result</a></div></div>
+<div class="observation"><span class="mini-label">What I noticed</span><p>The first pair shows the Double Rainbow Café entrance and the recessed entrance beside it. The images combine into a recognizable scene, but looking closely shows that some features do not line up exactly.</p><p>In the overwrite version, the reference image looks sharper, but I can see an abrupt boundary across the café sign and the trim above it. Feathering makes that boundary less obvious.</p><p>However, feathering also makes the alignment errors easier to notice. The “Suite 2” lettering and the window bars on the right have doubled edges. Some of the upper trim also looks soft or doubled. This showed me that a smoother seam does not necessarily mean a better result overall.</p><p>The building still looks slanted because I am using the right photo’s perspective. Unlike the rectification examples, I am not trying to make the whole building look front-facing.</p></div>
+<details><summary>View geometric coverage and canvas dimensions</summary>
+<figure class=""><a class="image-link" href="images/mosaic1_coverage.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 1 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap."><img src="images/mosaic1_coverage.png" alt="Mosaic 1 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap." width="1296" height="651" loading="lazy"></a><figcaption>Mosaic 1 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap.</figcaption></figure>
+<div class="table-wrap"><table><thead><tr><th scope="col">Canvas width × height</th><th scope="col">Origin (x, y)</th><th scope="col">Overlap pixels</th></tr></thead><tbody><tr><td>1798 × 934</td><td>(-598, -259)</td><td>560,259</td></tr></tbody></table></div>
+<p>Coverage indicates where blending happens. It does not measure alignment accuracy.</p></details></article>
+<article id="mosaic-2"><h3>Mosaic 2: Building and outdoor patio</h3>
+<div class="figure-grid cols-2"><figure class=""><a class="image-link" href="images/mosaic2_left_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 2 · Left source"><img src="images/mosaic2_left_working.png" alt="Mosaic 2 · Left source" width="1200" height="675" loading="lazy"></a><figcaption>Mosaic 2 · Left source</figcaption></figure><figure class=""><a class="image-link" href="images/mosaic2_right_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 2 · Right reference"><img src="images/mosaic2_right_working.png" alt="Mosaic 2 · Right reference" width="1200" height="675" loading="lazy"></a><figcaption>Mosaic 2 · Right reference</figcaption></figure></div>
+<div class="compare"><div class="compare-labels"><strong>Overwrite baseline</strong><strong>Feathered mosaic</strong></div><div class="compare-stage"><img src="images/mosaic2_final.png" width="1605" height="826" alt="Mosaic 2: final feathered result" loading="lazy"><img class="overlay" src="images/mosaic2_overwrite.png" width="1605" height="826" alt="Mosaic 2: overwrite comparison" loading="lazy"><span class="divider"></span></div><label for="compare-2">Comparison position</label><input id="compare-2" type="range" min="0" max="100" value="50" aria-label="Mosaic 2: reveal overwrite on the left and feathering on the right"><div class="links"><a href="images/mosaic2_overwrite.png" target="_blank" rel="noopener">Open overwrite</a> · <a href="images/mosaic2_final.png" target="_blank" rel="noopener">Open feathered result</a></div></div>
+<div class="observation"><span class="mini-label">What I noticed</span><p>The second pair shows a building, string lights, a banner, a fence, and plants. The overall scene lines up roughly, but the smaller details in the overlap still disagree.</p><p>The overwrite version keeps the banner text and fence bars relatively sharp. However, there is a visible vertical seam on the left side of the overlap, crossing the wall and banner. The lower edge of the overwritten image also creates an abrupt transition.</p><p>The feathered version softens these boundaries, but the banner lettering, fence bars, and some lights look doubled. Since the features are slightly displaced, averaging the two images shows both versions at once.</p><p>For this pair, I think the overwrite version looks sharper, while the feathered version has a less obvious seam. Neither result completely solves the problem. The remaining misalignment could come from inaccurate clicks or camera movement between the photos. I cannot tell the exact cause from the final mosaic alone.</p></div>
+<details><summary>View geometric coverage and canvas dimensions</summary>
+<figure class=""><a class="image-link" href="images/mosaic2_coverage.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 2 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap."><img src="images/mosaic2_coverage.png" alt="Mosaic 2 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap." width="1300" height="649" loading="lazy"></a><figcaption>Mosaic 2 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap.</figcaption></figure>
+<div class="table-wrap"><table><thead><tr><th scope="col">Canvas width × height</th><th scope="col">Origin (x, y)</th><th scope="col">Overlap pixels</th></tr></thead><tbody><tr><td>1605 × 826</td><td>(-405, -104)</td><td>627,337</td></tr></tbody></table></div>
+<p>Coverage indicates where blending happens. It does not measure alignment accuracy.</p></details></article>
+<article id="mosaic-3"><h3>Mosaic 3: Indoor stairwell and framed artwork</h3>
+<div class="figure-grid cols-2"><figure class=""><a class="image-link" href="images/mosaic3_left_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 3 · Left source"><img src="images/mosaic3_left_working.png" alt="Mosaic 3 · Left source" width="1200" height="675" loading="lazy"></a><figcaption>Mosaic 3 · Left source</figcaption></figure><figure class=""><a class="image-link" href="images/mosaic3_right_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 3 · Right reference"><img src="images/mosaic3_right_working.png" alt="Mosaic 3 · Right reference" width="1200" height="675" loading="lazy"></a><figcaption>Mosaic 3 · Right reference</figcaption></figure></div>
+<div class="compare"><div class="compare-labels"><strong>Overwrite baseline</strong><strong>Feathered mosaic</strong></div><div class="compare-stage"><img src="images/mosaic3_final.png" width="2085" height="1109" alt="Mosaic 3: final feathered result" loading="lazy"><img class="overlay" src="images/mosaic3_overwrite.png" width="2085" height="1109" alt="Mosaic 3: overwrite comparison" loading="lazy"><span class="divider"></span></div><label for="compare-3">Comparison position</label><input id="compare-3" type="range" min="0" max="100" value="50" aria-label="Mosaic 3: reveal overwrite on the left and feathering on the right"><div class="links"><a href="images/mosaic3_overwrite.png" target="_blank" rel="noopener">Open overwrite</a> · <a href="images/mosaic3_final.png" target="_blank" rel="noopener">Open feathered result</a></div></div>
+<div class="observation"><span class="mini-label">What I noticed</span><p>For the third mosaic, I used an indoor stairwell scene with a large framed artwork, ceiling tiles, a light, a handrail, and a floor-number sign.</p><p>The overwrite result has a clear vertical boundary through the left part of the artwork and the ceiling above it. The artwork and frame do not connect smoothly across that boundary, making it look like one photograph was placed directly on top of the other.</p><p>Feathering makes this boundary much less noticeable. The artwork, ceiling, and wall blend more gradually, so the overall image looks more continuous.</p><p>There are still some soft or slightly doubled details around the frame, the lines inside the artwork, and the ceiling. The seam looks better, but the alignment is not perfect.</p><p>The artwork’s glass also contains reflections from the lights. I would not treat every bright or repeated shape there as a stitching error, since reflections can already be present in the source photos and can change with the viewpoint.</p></div>
+<details><summary>View geometric coverage and canvas dimensions</summary>
+<figure class=""><a class="image-link" href="images/mosaic3_coverage.png" target="_blank" rel="noopener" aria-label="Open full-size image: Mosaic 3 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap."><img src="images/mosaic3_coverage.png" alt="Mosaic 3 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap." width="1270" height="651" loading="lazy"></a><figcaption>Mosaic 3 · 0 images: empty canvas; 1 image: single coverage; 2 images: overlap.</figcaption></figure>
+<div class="table-wrap"><table><thead><tr><th scope="col">Canvas width × height</th><th scope="col">Origin (x, y)</th><th scope="col">Overlap pixels</th></tr></thead><tbody><tr><td>2085 × 1109</td><td>(-885, -271)</td><td>499,727</td></tr></tbody></table></div>
+<p>Coverage indicates where blending happens. It does not measure alignment accuracy.</p></details></article>
+<details><summary>Inspect feathering and mosaic compositing</summary><pre><code>def feather_weights(image):
+    height, width = image.shape[:2]
+    y, x = np.indices((height, width), dtype=np.float32)
+    distance = np.minimum(np.minimum(x + 1, width - x), np.minimum(y + 1, height - y))
+    return distance / distance.max()
+
+
+def create_mosaic(left, right, H):
+    corners = np.vstack([checked_corners(left, H), image_corners(right)])
+    shape, origin = canvas_from_points(corners)
+    numerator = np.zeros((*shape, 3), dtype=np.float32)
+    denominator = np.zeros(shape, dtype=np.float32)
+    baseline = np.zeros((*shape, 3), dtype=np.float32)
+    overlap_count = np.zeros(shape, dtype=np.uint8)
+    for image, transform in ((left, H), (right, np.eye(3))):
+        #warp the weight field with exactly the same coordinates as the RGB channels
+        packed = np.dstack([image, feather_weights(image)])
+        warped, valid = warp_to_canvas(packed, transform, shape, origin, &#x27;bilinear&#x27;)
+        weight = np.where(valid, warped[:, :, 3], 0)
+        numerator += warped[:, :, :3] * weight[:, :, None]
+        denominator += weight
+        baseline[valid] = warped[:, :, :3][valid]
+        overlap_count += valid.astype(np.uint8)
+    mosaic = np.zeros_like(numerator)
+    valid_output = denominator &gt; 0
+    np.divide(numerator, denominator[:, :, None], out=mosaic, where=valid_output[:, :, None])
+    return mosaic, valid_output, baseline, overlap_count, origin</code></pre></details>
+</section>
+<section class="section" id="takeaways"><div class="section-heading"><div class="eyebrow">Reflection</div><h2>What I learned</h2><p>A smoother seam is only one part of a successful mosaic.</p></div>
+<p>Before comparing the results, I expected feathering to make the mosaics look better everywhere. Instead, I found that it improves the transition between images but can make misalignment more noticeable.</p><p>In mosaic 1, the seam becomes less obvious, but the lettering and window bars show ghosting. In mosaic 2, overwrite keeps sharper details, while feathering produces doubled text and fence bars. In mosaic 3, feathering hides the boundary through the artwork more effectively, although some softness remains.</p><p>The main thing I learned is that blending and alignment solve different problems. Feathering can soften a seam, but it cannot move mismatched features into the correct positions. The coverage maps help show where both images contribute, but they do not tell me whether those images are accurately aligned.</p>
+<p>I also learned that staying in one place and rotating the phone is a useful capture strategy, but small changes in the camera center can still matter. Since these scenes contain surfaces at different depths, one homography may not align every feature if there was some translation. The images also contain reflections and exposure differences. I cannot identify the exact contribution of each cause from the final results alone.</p>
+</section>
+
+<footer><span>Kelvin Lim · CS 180 · Project 4A</span><p>Photographs and results from my project experiments. <a href="#top">Back to top ↑</a></p></footer></main><script src="script.js"></script></body></html>
