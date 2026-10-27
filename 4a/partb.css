@@ -1,0 +1,15 @@
+/* Supplements the existing Part A stylesheet; keep styles.css. */
+.toc-bar { flex-wrap: wrap; gap: .5rem 1rem; }
+.part-b { scroll-margin-top: 8rem; }
+.part-b img { display: block; width: 100%; max-width: 100%; height: auto; }
+.part-b figure { margin: 1.5rem 0; }
+.part-b figcaption { padding: .6rem 0; font-size: .9rem; line-height: 1.5; }
+.part-b article + article { margin-top: 3rem; }
+.part-b pre { max-width: 100%; overflow-x: auto; white-space: pre; }
+.part-b .table-wrap { overflow-x: auto; }
+.part-b table { width: 100%; border-collapse: collapse; }
+.part-b th, .part-b td { padding: .7rem; text-align: left; }
+.part-b .math-box { overflow-x: auto; padding: 1rem; }
+.part-b .links { line-height: 1.9; }
+.part-b summary { cursor: pointer; padding: .7rem 0; }
+@media(max-width: 600px) { .part-b { scroll-margin-top: 2rem; } .part-b th, .part-b td { padding: .5rem; } }

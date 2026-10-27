@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CS 180 Project 2: Fun with Filters and Frequencies</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 
@@ -207,9 +211,9 @@
     <h2>Part 1: Filters and Edges</h2>
 
     <h3 id="p11">Part 1.1 — Convolutions from Scratch</h3>
-    <p>I implemented 2D convolution twice: once with four nested loops (the literal, unoptimized translation of the convolution formula), and once with two loops, where the innermost multiply-and-accumulate step is replaced by a single vectorized numpy operation (<code>np.sum(patch * flipped_kernel)</code>). Both versions flip the kernel 180° before sliding it across the image, which is what distinguishes true <em>convolution</em> from <em>cross-correlation</em>. For a symmetric filter like a box filter, flipping makes no difference, but for an asymmetric filter like <code>Dx = [1, 0, -1]</code> it flips the sign convention of the result.</p>
+    <p>I implemented 2D convolution twice: once with four nested loops (the literal, unoptimized translation of the convolution formula), and once with two loops, where the innermost multiply-and-accumulate step is replaced by a single vectorized numpy operation (<code>np.sum(patch * flipped_kernel)</code>). Both versions flip the kernel 180° before sliding it across the image, which is what distinguishes true <em>convolution</em> from <em>cross-correlation</em>. For a symmetric filter like a box filter, flipping makes no difference, but for an asymmetric filter like $D_x = [1, 0, -1]$ it flips the sign convention of the result.</p>
 
-    <p>Both implementations support zero-padding in two modes: <code>"same"</code> (output matches input size, padding by <code>kernel_size // 2</code> on each side) and <code>"full"</code> (output is <code>n + k - 1</code>, capturing every possible overlap between kernel and image, even a single corner touching).</p>
+    <p>Both implementations support zero-padding in two modes: <code>"same"</code> (output matches input size, padding by $k / 2$ on each side) and <code>"full"</code> (output is $n + k - 1$, capturing every possible overlap between kernel and image, even a single corner touching).</p>
 
     <h4>Code: four loops</h4>
 <pre><code>def convolve_four_loops(image, kernel, mode="same"):
@@ -309,7 +313,7 @@
     <hr>
 
     <h3 id="p12">Part 1.2 — Finite Difference Operator</h3>
-    <p>Using the standard cameraman test image, I computed the partial derivatives <code>Dx</code> and <code>Dy</code> by convolving with the finite-difference operators <code>[1, 0, -1]</code> (horizontal) and its transpose (vertical). Combining them into the gradient magnitude, <code>sqrt(Dx² + Dy²)</code>, gives one "edge strength" value per pixel, independent of edge direction.</p>
+    <p>Using the standard cameraman test image, I computed the partial derivatives $D_x$ and $D_y$ by convolving with the finite-difference operators $[1, 0, -1]$ (horizontal) and its transpose (vertical). Combining them into the gradient magnitude, $\sqrt{D_x^2 + D_y^2}$, gives one "edge strength" value per pixel, independent of edge direction.</p>
 
     <div class="triple">
         <div class="image-placeholder">
@@ -344,7 +348,7 @@
     <hr>
 
     <h3 id="p13">Part 1.3 — Derivative of Gaussian (DoG) Filter</h3>
-    <p>The raw finite-difference edges from Part 1.2 are noisy because differentiation amplifies high-frequency content indiscriminately, including sensor noise. The fix is to smooth with a Gaussian before differentiating. I built the 2D Gaussian with <code>cv2.getGaussianKernel()</code> (ksize=9, sigma=2) to get a 1D bell curve, then took its outer product with its own transpose.</p>
+    <p>The raw finite-difference edges from Part 1.2 are noisy because differentiation amplifies high-frequency content indiscriminately, including sensor noise. The fix is to smooth with a Gaussian before differentiating. I built the 2D Gaussian with <code>cv2.getGaussianKernel()</code> (kernel size $9$, $\sigma = 2$) to get a 1D bell curve, then took its outer product with its own transpose.</p>
 
     <div class="image-placeholder">
         <img src="images/p13_gauss.png" alt="2D Gaussian kernel visualized as an image">
@@ -379,7 +383,7 @@
     </div>
 
     <h4>Folding two convolutions into one (Derivative of Gaussian)</h4>
-    <p>Because convolution is associative, <code>Dx * (G * I) = (Dx * G) * I</code>. Rather than blurring and then differentiating (two convolutions over the image), I convolved the small Gaussian kernel directly with <code>Dx</code> and <code>Dy</code> to get two combined DoG filters, and applied each to the <em>original</em> image in a single convolution.</p>
+    <p>Because convolution is associative, $D_x * (G * I) = (D_x * G) * I$. Rather than blurring and then differentiating (two convolutions over the image), I convolved the small Gaussian kernel directly with $D_x$ and $D_y$ to get two combined DoG filters, and applied each to the <em>original</em> image in a single convolution.</p>
 
     
         <div class="image-placeholder">
@@ -410,11 +414,11 @@ Max absolute difference (interior only):    7.2e-16</code></pre>
 
 <pre><code>sharpened = image + alpha * (image - blur(image))</code></pre>
 
-    <p>This collapses into a single convolution kernel, <code>(1 + alpha) * impulse - alpha * gaussian</code>, though I implemented the explicit multi-step version for clarity. I blur with <code>boundary="symm"</code> so zero-padding doesn't create a dark border that then gets amplified, and clip results to [0, 1].</p>
+    <p>This collapses into a single convolution kernel, $(1 + \alpha)\delta - \alpha G$, though I implemented the explicit multi-step version for clarity. I blur with <code>boundary="symm"</code> so zero-padding doesn't create a dark border that then gets amplified, and clip results to $[0, 1]$.</p>
 
     <div class="image-placeholder">
         <img src="images/p21_taj_pipeline.png" alt="4-panel Taj Mahal breakdown - original / blurred / high-freq residual / sharpened at alpha=1.0">
-        <span>Taj Mahal: original / blurred / high-frequency residual / sharpened, alpha=1.0 (images/p21_taj_pipeline.png)</span>
+        <span>Taj Mahal: original / blurred / high-frequency residual / sharpened, $\alpha = 1.0$ (images/p21_taj_pipeline.png)</span>
     </div>
 
     <h4>Varying the sharpening amount</h4>
@@ -422,28 +426,28 @@ Max absolute difference (interior only):    7.2e-16</code></pre>
         <img src="images/p21_taj_alpha.png" alt="Alpha sweep grid - original, 0.5, 1.0, 2.0, 4.0">
         <span>Alpha sweep 0.5 / 1.0 / 2.0 / 4.0 (images/p21_taj_alpha.png)</span>
     </div>
-    <p>At alpha=4.0, oversharpening artifacts appear: the sky and flat marble walls, which should be nearly featureless, pick up a grainy texture. Unsharp masking amplifies <em>all</em> high-frequency content equally, including the small amount of sensor noise present even in flat regions; it cannot tell detail from noise. I chose <strong>alpha = 1.0</strong> as the featured result: a clear improvement in sharpness with no visible artifacts.</p>
+    <p>At $\alpha = 4.0$, oversharpening artifacts appear: the sky and flat marble walls, which should be nearly featureless, pick up a grainy texture. Unsharp masking amplifies <em>all</em> high-frequency content equally, including the small amount of sensor noise present even in flat regions; it cannot tell detail from noise. I chose $\alpha = 1.0$ as the featured result: a clear improvement in sharpness with no visible artifacts.</p>
 
     <h4>Additional images</h4>
-    <p>I applied the same pipeline to a second and a third image (the third is AI-generated/edited, to test a different kind of image statistics), choosing alpha for each with a sweep. For the third image, the small printed phone number in the background served as a legibility checkpoint: alpha=0.6 gave the clearest digits without looking harsh.</p>
+    <p>I applied the same pipeline to a second and a third image (the third is AI-generated/edited, to test a different kind of image statistics), choosing $\alpha$ for each with a sweep. For the third image, the small printed phone number in the background served as a legibility checkpoint: $\alpha = 0.6$ gave the clearest digits without looking harsh.</p>
 
  
         <div class="image-placeholder">
             <img src="images/p21_img2.png" alt="Second image original / blurred / high-frequency / sharpened">
-            <span>Second image: original / blurred / high-freq / sharpened, alpha=1.0 (images/p21_img2.png)</span>
+            <span>Second image: original / blurred / high-freq / sharpened, $\alpha = 1.0$ (images/p21_img2.png)</span>
         </div>
         <div class="image-placeholder">
             <img src="images/p21_img3.png" alt="Third image original vs. sharpened at alpha=0.6">
-            <span>Third image: original vs sharpened, alpha=0.6 (images/p21_img3.png)</span>
+            <span>Third image: original vs sharpened, $\alpha = 0.6$ (images/p21_img3.png)</span>
         </div>
 
 
     <h4>Blurring a sharp image and attempting to reverse it</h4>
     <div class="image-placeholder">
         <img src="images/p21_recover.png" alt="3-panel comparison - sharp original / deliberately blurred / re-sharpened attempt">
-        <span>Sharp original / deliberately blurred (sigma=4) / re-sharpened (images/p21_recover.png)</span>
+        <span>Sharp original / deliberately blurred ($\sigma = 4$) / re-sharpened (images/p21_recover.png)</span>
     </div>
-    <p>I took the sharp Taj Mahal, blurred it heavily (15×15 kernel, sigma=4), then tried to "unsharpen" it back with the same technique.</p>
+    <p>I took the sharp Taj Mahal, blurred it heavily (a $15 \times 15$ kernel with $\sigma = 4$), then tried to "unsharpen" it back with the same technique.</p>
     <div class="callout">
         <strong>Observation:</strong>
         <p>Unsharp masking only partially restores contrast at edges that survived the blur; it cannot recover fine detail, such as marble tile texture or window lattices, that the blur destroyed. It is a perceptual sharpening technique, not a true deblurring or inverse operation. Blurring is lossy: once a frequency band has been attenuated toward zero, no linear filter can invert that loss without also amplifying the noise left at that frequency.</p>
@@ -464,13 +468,13 @@ Max absolute difference (interior only):    7.2e-16</code></pre>
         </div>
         <div class="image-placeholder">
             <img src="images/p22_derek_hybrid.png" alt="Final hybrid, sigma1=7, sigma2=2, black padding bar cropped off">
-            <span>Final hybrid, sigma1=7, sigma2=2 (images/p22_derek_hybrid.png)</span>
+            <span>Final hybrid, $\sigma_1 = 7$, $\sigma_2 = 2$ (images/p22_derek_hybrid.png)</span>
         </div>
     </div>
-    <p>Derek supplies the high frequencies (sigma1=7) and Nutmeg the low frequencies (sigma2=2), chosen from a 3×3 sweep. The black bar at the top of the aligned images is padding added by the recentering step; I cropped it off the final result.</p>
+    <p>Derek supplies the high frequencies ($\sigma_1 = 7$) and Nutmeg the low frequencies ($\sigma_2 = 2$), chosen from a $3 \times 3$ sweep. The black bar at the top of the aligned images is padding added by the recentering step; I cropped it off the final result.</p>
 
     <h4>Favorite result with full frequency analysis: Anthony + Will</h4>
-    <p>I chose this pair (my second own hybrid, sigma1=5, sigma2=10) as my favorite. Anthony supplies the high frequencies and Will the low frequencies.</p>
+    <p>I chose this pair (my second own hybrid, $\sigma_1 = 5$, $\sigma_2 = 10$) as my favorite. Anthony supplies the high frequencies and Will the low frequencies.</p>
 
     <div class="side-by-side">
         <div class="image-placeholder">
@@ -479,7 +483,7 @@ Max absolute difference (interior only):    7.2e-16</code></pre>
         </div>
         <div class="image-placeholder">
             <img src="images/p22_aw_hybrid.png" alt="Final hybrid, sigma1=5, sigma2=10">
-            <span>Final hybrid, sigma1=5, sigma2=10 (images/p22_aw_hybrid.png)</span>
+            <span>Final hybrid, $\sigma_1 = 5$, $\sigma_2 = 10$ (images/p22_aw_hybrid.png)</span>
         </div>
     </div>
 
@@ -488,7 +492,7 @@ Max absolute difference (interior only):    7.2e-16</code></pre>
         <img src="images/p22_aw_sweep.png" alt="Sigma sweep grid for the Anthony + Will pair">
         <span>Sigma sweep for Anthony + Will (images/p22_aw_sweep.png)</span>
     </div>
-    <p>I compared candidate (sigma1, sigma2) combinations side by side and picked the one where Anthony reads clearly up close while Will dominates once the image is shrunk. Larger sigma2 leaves only Will's coarse shape; smaller sigma1 keeps more of Anthony's fine detail.</p>
+    <p>I compared candidate $(\sigma_1,\sigma_2)$ combinations side by side and picked the one where Anthony reads clearly up close while Will dominates once the image is shrunk. Larger $\sigma_2$ leaves only Will's coarse shape; smaller $\sigma_1$ keeps more of Anthony's fine detail.</p>
 
     <h4>Frequency analysis</h4>
     <div class="image-placeholder tall">
@@ -509,7 +513,7 @@ Max absolute difference (interior only):    7.2e-16</code></pre>
         </div>
         <div class="image-placeholder">
             <img src="images/p22_cs_hybrid.png" alt="Final hybrid, sigma1=3, sigma2=1">
-            <span>Final hybrid, sigma1=3, sigma2=1 (images/p22_cs_hybrid.png)</span>
+            <span>Final hybrid, $\sigma_1 = 3$, $\sigma_2 = 1$ (images/p22_cs_hybrid.png)</span>
         </div>
     </div>
 
@@ -520,7 +524,6 @@ Max absolute difference (interior only):    7.2e-16</code></pre>
 
     <p>This pairing combines a photograph with a flat-shaded cartoon. The cartoon's "detail" is almost entirely thin black outline strokes on solid flat color, so it carries far less high-frequency energy than a textured photograph. The high-pass image above shows only sparse outlines on a flat gray field, so there isn't much high-frequency signal to work with.</p>
 
-    <p>As a result, even at my chosen cutoffs (sigma1=3, sigma2=1), the outlines read faintly rather than dominantly up close. I deliberately did <strong>not</strong> apply a gain multiplier to the high-pass component, and present the result as-is because it illustrates a real limitation: hybrid images work best when both sources have comparable frequency content. When one image is mostly flat, its high-pass contribution is sparse and gets overshadowed by the other image's low frequencies, no matter how the sigmas are tuned. Amplifying the high-pass term before combining would be the separate fix for that.</p>
 
 
     <hr>
@@ -541,7 +544,7 @@ def laplacian_stack(gauss_stack):
     lap_stack.append(gauss_stack[-1])  # low-frequency residual
     return lap_stack</code></pre>
 
-    <p><strong>Implementation detail:</strong> sigma doubles at each level (and is applied to the original image) rather than reapplying a fixed sigma to the previous level. Repeating a small blur only grows the effective radius like <code>sqrt(n) * sigma</code>, so the coarsest level ends up barely blurrier than an early one. Doubling produces a rapidly widening blur, which matters directly in Part 2.4: a mask that doesn't blur enough at coarse levels can't widen the blended seam.</p>
+    <p><strong>Implementation detail:</strong> $\sigma$ doubles at each level (and is applied to the original image) rather than reapplying a fixed $\sigma$ to the previous level. Repeating a small blur only grows the effective radius like $\sqrt{n}\,\sigma$, so the coarsest level ends up barely blurrier than an early one. Doubling produces a rapidly widening blur, which matters directly in Part 2.4: a mask that doesn't blur enough at coarse levels can't widen the blended seam.</p>
 
     <div class="image-placeholder">
         <img src="images/p23_apple_g.png" alt="Apple Gaussian stack, all 5 levels in one row">

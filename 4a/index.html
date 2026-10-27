@@ -1,6 +1,6 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Project 04A · Image Warping &amp; Mosaicing · CS 180</title><meta name="description" content="Kelvin Lim explores homographies, inverse warping, image rectification, and manually aligned mosaics for CS180 Project 4A."><link rel="stylesheet" href="styles.css"></head><body><a class="skip" href="#a1">Skip to project content</a><main class="page-shell"><div class="topline"><a class="mark" href="../index.html">CS 180 portfolio</a><span>Project 04 · Part A</span><a href="../index.html">← All Projects</a></div><div class="student-banner"><span><strong>Student:</strong> Kelvin Lim</span><span>CS 180 · UC Berkeley · Fall 2026</span></div><header class="intro" id="top"><div class="eyebrow">Programming Project #4 · Part A</div><h1>Image Warping<br>&amp; Mosaicing.</h1><p>From matching a few points to combining two views. I built homography estimation and image warping from scratch, then tried them on rectifying flat objects and stitching my own photographs.</p><div class="stats"><span><strong>3</strong> mosaic pairs</span><span><strong>10</strong> matches per pair</span><span><strong>2</strong> rectification examples</span><span><strong>2</strong> handwritten interpolators</span></div></header>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Project 04 · Image Warping, Mosaicing &amp; Autostitching · CS 180</title><meta name="description" content="Kelvin Lim explores manual and automatic panorama stitching: homographies, rectification, Harris corners, ANMS, feature matching and RANSAC for CS180 Project 4A and 4B."><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="partb.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script></head><body><a class="skip" href="#a1">Skip to project content</a><main class="page-shell"><div class="topline"><a class="mark" href="../index.html">CS 180 portfolio</a><span>Project 04 · Parts A &amp; B</span><a href="../index.html">← All Projects</a></div><div class="student-banner"><span><strong>Student:</strong> Kelvin Lim</span><span>CS 180 · UC Berkeley · Fall 2026</span></div><header class="intro" id="top"><div class="eyebrow">Programming Project #4 · Parts A &amp; B</div><h1>Image Warping<br>&amp; Autostitching.</h1><p>From matching a few points to combining two views. I built homography estimation and image warping from scratch, then tried them on rectifying flat objects and stitching my own photographs. In Part B, I replace manual clicks with detected features, descriptor matching and RANSAC.</p><div class="stats"><span><strong>3</strong> mosaic pairs</span><span><strong>10</strong> manual matches per pair</span><span><strong>2</strong> rectification examples</span><span><strong>2</strong> handwritten interpolators</span></div></header>
 <figure class="hero-figure"><a class="image-link" href="images/mosaic3_final.png" target="_blank" rel="noopener" aria-label="Open full-size image: A wider view of an indoor stairwell landing, assembled with a homography and feathered blending."><img src="images/mosaic3_final.png" alt="A wider view of an indoor stairwell landing, assembled with a homography and feathered blending." width="2085" height="1109" loading="eager"></a><figcaption>A wider view of an indoor stairwell landing, assembled with a homography and feathered blending.</figcaption></figure>
-<nav class="toc-bar" aria-label="Project sections"><a href="#a1">A.1 · Photographs</a><a href="#a2">A.2 · Homographies</a><a href="#a3">A.3 · Rectification</a><a href="#a4">A.4 · Mosaics</a><a href="#takeaways">What I learned</a><a href="#code">Code &amp; data</a></nav>
+<nav class="toc-bar" aria-label="Project sections"><a href="#a1">A.1 · Photographs</a><a href="#a2">A.2 · Homographies</a><a href="#a3">A.3 · Rectification</a><a href="#a4">A.4 · Mosaics</a><a href="#takeaways">Part A reflection</a><a href="#b1">B.1 · Corners</a><a href="#b2">B.2 · Descriptors</a><a href="#b3">B.3 · Matching</a><a href="#b4">B.4 · Autostitching</a><a href="#b-takeaways">Part B reflection</a></nav>
 <section class="section" id="a1"><div class="section-heading"><div class="eyebrow">A.1 · Shoot the pictures</div><h2>Starting with overlapping views</h2><p>Three image pairs, captured by rotating my phone from left to right.</p></div>
 <p>I took these photographs myself. For each mosaic pair, I stayed in one place and rotated my phone from left to right, keeping shared features visible in both images. My goal was to keep the camera center approximately fixed while changing its viewing direction. Staying in one place does not guarantee zero camera translation, so small movement could still affect the alignment.</p><p>The first two pairs are nighttime outdoor scenes. For my final third pair, I used an indoor stairwell with a framed artwork. I used working copies resized to a maximum side length of 1200 pixels, so all point coordinates and errors on this page refer to those copies.</p>
 <h3>Pair 1: Café entrance</h3>
@@ -14,7 +14,7 @@
 <p>I clicked 10 corresponding features in each image pair, keeping their order the same in both images. Each match represents the same physical feature, even though its pixel coordinates differ. The right image is the reference.</p><p>I implemented computeH(im1_pts, im2_pts) by building a linear system and solving it with NumPy least squares. I did not use a built-in homography estimator. Each correspondence supplies two equations, so 10 matches produce 20 equations for 8 unknowns.</p>
 <div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>λ</mi><mrow><mo>[</mo><mtable><mtr><mtd><mi>u</mi></mtd></mtr><mtr><mtd><mi>v</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><msub><mi>h</mi><mi>11</mi></msub></mtd><mtd><msub><mi>h</mi><mi>12</mi></msub></mtd><mtd><msub><mi>h</mi><mi>13</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>21</mi></msub></mtd><mtd><msub><mi>h</mi><mi>22</mi></msub></mtd><mtd><msub><mi>h</mi><mi>23</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>31</mi></msub></mtd><mtd><msub><mi>h</mi><mi>32</mi></msub></mtd><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow><mrow><mo>[</mo><mtable><mtr><mtd><mi>x</mi></mtd></mtr><mtr><mtd><mi>y</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
 <h3>Building the system: Ah = b</h3>
-<p>For a source point (x, y) and its target (u, v), I divide the transformed homogeneous coordinates by their third component, then rearrange the two equations. One match contributes the following rows:</p>
+<p>For a source point $(x,y)$ and its target $(u,v)$, I divide the transformed homogeneous coordinates by their third component, then rearrange the two equations. One match contributes the following rows:</p>
 <div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo>[</mo><mtable><mtr><mtd><mi>x</mi></mtd><mtd><mi>y</mi></mtd><mtd><mn>1</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mo>−</mo><mi>u</mi><mi>x</mi></mtd><mtd><mo>−</mo><mi>u</mi><mi>y</mi></mtd></mtr><mtr><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mn>0</mn></mtd><mtd><mi>x</mi></mtd><mtd><mi>y</mi></mtd><mtd><mn>1</mn></mtd><mtd><mo>−</mo><mi>v</mi><mi>x</mi></mtd><mtd><mo>−</mo><mi>v</mi><mi>y</mi></mtd></mtr></mtable><mo>]</mo></mrow><mrow><mo>[</mo><mtable><mtr><mtd><msub><mi>h</mi><mi>11</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>12</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>13</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>21</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>22</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>23</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>31</mi></msub></mtd></mtr><mtr><mtd><msub><mi>h</mi><mi>32</mi></msub></mtd></mtr></mtable><mo>]</mo></mrow><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mi>u</mi></mtd></mtr><mtr><mtd><mi>v</mi></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
 <p>Stacking all the rows gives A with shape 20 × 8 and b with length 20. I solve for the vector h that minimizes the squared residual ||Ah − b||², then reshape its eight entries into H and set the bottom-right entry to 1. Before solving, I center and scale both point sets so their mean distance from the origin is √2. This improves numerical conditioning. I then convert the estimated matrix back to the working-image coordinates.</p>
 <div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><msup><msub><mi>T</mi><mi>dst</mi></msub><mrow><mo>−</mo><mn>1</mn></mrow></msup><msub><mi>H</mi><mi>n</mi></msub><msub><mi>T</mi><mi>src</mi></msub></math></div>
@@ -106,15 +106,15 @@ def computeH(im1_pts, im2_pts):
     return H</code></pre></details>
 </section>
 <section class="section" id="a3"><div class="section-heading"><div class="eyebrow">A.3 · Warp the images</div><h2>Making an angled rectangle face forward</h2><p>Inverse warping with nearest neighbor and bilinear interpolation, both implemented from scratch.</p></div>
-<p>I wrote warpImageNearestNeighbor(im, H) and warpImageBilinear(im, H), with a shared inverse-warping routine. For each output pixel, I apply H inverse to find its location in the source image, divide by the homogeneous coordinate, and sample its color. This avoids the holes that can occur when forward-mapped pixels miss output positions.</p><p>I treat integer coordinates as pixel centers, with (0, 0) at the top-left pixel center. For full image warps, I transform the four corners to find the output bounds. For rectification, I sample directly into the target rectangle rather than allocating a large warped background. Invalid source locations are excluded using a mask.</p>
+<p>I wrote warpImageNearestNeighbor(im, H) and warpImageBilinear(im, H), with a shared inverse-warping routine. For each output pixel, I apply H inverse to find its location in the source image, divide by the homogeneous coordinate, and sample its color. This avoids the holes that can occur when forward-mapped pixels miss output positions.</p><p>I treat integer coordinates as pixel centers, with $(0,0)$ at the top-left pixel center. For full image warps, I transform the four corners to find the output bounds. For rectification, I sample directly into the target rectangle rather than allocating a large warped background. Invalid source locations are excluded using a mask.</p>
 <div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mrow><mo>[</mo><mtable><mtr><mtd><mi>x</mi></mtd></mtr><mtr><mtd><mi>y</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow><mo>∼</mo><msup><mi>H</mi><mrow><mo>−</mo><mn>1</mn></mrow></msup><mrow><mo>[</mo><mtable><mtr><mtd><mi>u</mi></mtd></mtr><mtr><mtd><mi>v</mi></mtd></mtr><mtr><mtd><mn>1</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
 <h3>Two ways to sample the source</h3>
 <div class="table-wrap"><table><thead><tr><th scope="col">Method</th><th scope="col">Implementation</th><th scope="col">Expected trade-off</th></tr></thead><tbody><tr><td>Nearest neighbor</td><td>Round each valid coordinate using floor(value + 0.5), then read one source pixel.</td><td>Fast, but can produce blocky or jagged edges.</td></tr><tr><td>Bilinear</td><td>Use the four neighboring pixels, weighted by the fractional x and y offsets.</td><td>Smoother edges, with more computation and some softening.</td></tr></tbody></table></div>
-<p>For bilinear interpolation, I set x₀ = floor(x), y₀ = floor(y), a = x − x₀, and b = y − y₀. The upper neighbors are x₁ = min(x₀ + 1, W − 1) and y₁ = min(y₀ + 1, H − 1). Clamping the upper neighbor keeps valid border pixels instead of discarding the last row or column.</p>
-<div class="math-box"><div>I(x, y) = (1 − a)(1 − b) I[y₀, x₀] + a(1 − b) I[y₀, x₁]<br>　　　　 + (1 − a)b I[y₁, x₀] + ab I[y₁, x₁]</div></div>
+<p>For bilinear interpolation, I set $x_0=\lfloor x\rfloor$, $y_0=\lfloor y\rfloor$, $a=x-x_0$, and $b=y-y_0$. The upper neighbors are $x_1=\min(x_0+1,W-1)$ and $y_1=\min(y_0+1,H-1)$. Clamping the upper neighbor keeps valid border pixels instead of discarding the last row or column.</p>
+<div class="math-box">$$I(x,y)=(1-a)(1-b)I[y_0,x_0]+a(1-b)I[y_0,x_1]+(1-a)bI[y_1,x_0]+abI[y_1,x_1]$$</div>
 <p>No library interpolation or high-level perspective-warp functions are used for these steps.</p>
 <h3>Rectification 1: Framed painting</h3>
-<p>I selected corners in the order top left, top right, bottom right, bottom left. I mapped them to (0, 0), (799, 0), (799, 1198), and (0, 1198). The assumed width-to-height ratio is <strong>2:3</strong>, giving a 800 × 1199 output. These proportions were not physically measured.</p>
+<p>I selected corners in the order top left, top right, bottom right, bottom left. I mapped them to $(0,0)$, $(799,0)$, $(799,1198)$, and $(0,1198)$. The assumed width-to-height ratio is <strong>$2:3$</strong>, giving a $800 \times 1199$ output. These proportions were not physically measured.</p>
 <div class="figure-grid cols-3"><figure class="portrait"><a class="image-link" href="images/rectify1_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Framed painting · Original working image"><img src="images/rectify1_working.png" alt="Framed painting · Original working image" width="675" height="1200" loading="lazy"></a><figcaption>Framed painting · Original working image</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify1_nearest.png" target="_blank" rel="noopener" aria-label="Open full-size image: Framed painting · Nearest neighbor"><img src="images/rectify1_nearest.png" alt="Framed painting · Nearest neighbor" width="800" height="1199" loading="lazy"></a><figcaption>Framed painting · Nearest neighbor</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify1_bilinear.png" target="_blank" rel="noopener" aria-label="Open full-size image: Framed painting · Bilinear"><img src="images/rectify1_bilinear.png" alt="Framed painting · Bilinear" width="800" height="1199" loading="lazy"></a><figcaption>Framed painting · Bilinear</figcaption></figure></div>
 <div class="observation"><span class="mini-label">What I noticed</span><p>For my first example, I used a photo of a framed painting taken from the side. I selected its four corners and mapped them to a rectangle with an assumed width-to-height ratio of 2:3. The output was 800 × 1199 pixels.</p><p>The change is easy to see when comparing the original and rectified images. In the original, the frame looks slanted because of the camera angle. After warping, its sides look vertical and its top and bottom look horizontal. The painting looks more like I photographed it from directly in front. However, since I assumed the aspect ratio, I cannot be sure that its proportions exactly match the real painting.</p></div>
 <details><summary>Inspect selected corners and the rectification homography</summary>
@@ -122,7 +122,7 @@ def computeH(im1_pts, im2_pts):
 <div class="math-box"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>H</mi><mo>=</mo><mrow><mo>[</mo><mtable><mtr><mtd><mn>0.80583031</mn></mtd><mtd><mn>0.13678012</mn></mtd><mtd><mn>-163.07670967</mn></mtd></mtr><mtr><mtd><mn>-1.42753585</mn></mtd><mtd><mn>1.25809539</mn></mtd><mtd><mn>267.93314906</mn></mtd></mtr><mtr><mtd><mn>-0.00151573</mn></mtd><mtd><mn>0.00031498</mn></mtd><mtd><mn>1.00000000</mn></mtd></mtr></mtable><mo>]</mo></mrow></math></div>
 </details>
 <h3>Rectification 2: Berkeley parking sign</h3>
-<p>I selected corners in the order top left, top right, bottom right, bottom left. I mapped them to (0, 0), (799, 0), (799, 1065), and (0, 1065). The assumed width-to-height ratio is <strong>3:4</strong>, giving a 800 × 1066 output. These proportions were not physically measured.</p>
+<p>I selected corners in the order top left, top right, bottom right, bottom left. I mapped them to $(0,0)$, $(799,0)$, $(799,1065)$, and $(0,1065)$. The assumed width-to-height ratio is <strong>$3:4$</strong>, giving a $800 \times 1066$ output. These proportions were not physically measured.</p>
 <div class="figure-grid cols-3"><figure class="portrait"><a class="image-link" href="images/rectify2_working.png" target="_blank" rel="noopener" aria-label="Open full-size image: Berkeley parking sign · Original working image"><img src="images/rectify2_working.png" alt="Berkeley parking sign · Original working image" width="675" height="1200" loading="lazy"></a><figcaption>Berkeley parking sign · Original working image</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify2_nearest.png" target="_blank" rel="noopener" aria-label="Open full-size image: Berkeley parking sign · Nearest neighbor"><img src="images/rectify2_nearest.png" alt="Berkeley parking sign · Nearest neighbor" width="800" height="1066" loading="lazy"></a><figcaption>Berkeley parking sign · Nearest neighbor</figcaption></figure><figure class="portrait"><a class="image-link" href="images/rectify2_bilinear.png" target="_blank" rel="noopener" aria-label="Open full-size image: Berkeley parking sign · Bilinear"><img src="images/rectify2_bilinear.png" alt="Berkeley parking sign · Bilinear" width="800" height="1066" loading="lazy"></a><figcaption>Berkeley parking sign · Bilinear</figcaption></figure></div>
 <div class="observation"><span class="mini-label">What I noticed</span><p>For the second example, I used a photo of a Berkeley parking sign. I selected the corners of its front face and used an assumed width-to-height ratio of 3:4. This produced an output of 800 × 1066 pixels.</p><p>The top and bottom of the sign slope in the original photo. After rectification, they look more horizontal, and the text looks more level. This helped me see how mapping the four corners to a rectangle can correct the perspective of a flat object.</p></div>
 <details><summary>Inspect selected corners and the rectification homography</summary>
@@ -269,4 +269,189 @@ def create_mosaic(left, right, H):
 <p>I also learned that staying in one place and rotating the phone is a useful capture strategy, but small changes in the camera center can still matter. Since these scenes contain surfaces at different depths, one homography may not align every feature if there was some translation. The images also contain reflections and exposure differences. I cannot identify the exact contribution of each cause from the final results alone.</p>
 </section>
 
-<footer><span>Kelvin Lim · CS 180 · Project 4A</span><p>Photographs and results from my project experiments. <a href="#top">Back to top ↑</a></p></footer></main><script src="script.js"></script></body></html>
+<section class="section part-b" id="b1"><div class="section-heading"><div class="eyebrow">B.1 · Harris corners &amp; ANMS</div><h2>From image structure to interest points</h2></div><p>Part B reuses the same three image pairs as Part A, but replaces manual clicks with automatic feature correspondences. This run loaded the six working PNGs exported by Part A, each with a longest side of 1200 pixels. The original JPGs can also be loaded by the notebook. The right image remains the reference.</p>
+<p>I first convert each image to grayscale, blur it with $\sigma = 1$, and compute horizontal and vertical Sobel gradients. I smooth the second moments with $\sigma = 1.5$ and calculate the single-scale Harris response:</p><div class="math-box">$$R=\det(M)-0.04\,\operatorname{trace}(M)^2$$</div>
+<p>I keep 3 × 3 local maxima above 0.0001 times the maximum response and exclude a 24-pixel border for descriptor support. This is a relative response threshold of 0.01%, not 1%.</p>
+<h3>Adaptive non-maximal suppression</h3><p>For each corner i, I find its distance to the nearest corner j satisfying R<sub>i</sub> &lt; 0.9 R<sub>j</sub>. I then retain the 500 corners with the largest suppression radii. A point with no sufficiently stronger neighbor receives an infinite radius, with response used to break ties. This reduces dense clusters while retaining spatially distributed strong features.</p>
+<div class="math-box">$$r_i=\min_{j:\,R_i<0.9R_j}\lVert x_i-x_j\rVert$$</div>
+<p>The plots show Harris candidates on the left and the selected ANMS corners on the right. For the patio’s left photograph, the candidate count drops from 1619 to 500. ANMS spreads the selection across the scene but cannot create texture in blank walls.</p><h3>Café entrance</h3><figure><a class="image-link" href="images/partb/mosaic1_left_corners.png" target="_blank" rel="noopener"><img src="images/partb/mosaic1_left_corners.png" alt="Café entrance: Harris candidates versus 500 ANMS corners, left source." width="1389" height="563" loading="lazy"></a><figcaption>Café entrance: Harris candidates versus 500 ANMS corners, left source.</figcaption></figure><details><summary>Show the right-reference corner comparison</summary><figure><a class="image-link" href="images/partb/mosaic1_right_corners.png" target="_blank" rel="noopener"><img src="images/partb/mosaic1_right_corners.png" alt="Café entrance: Harris candidates versus ANMS, right reference." width="1389" height="563" loading="lazy"></a><figcaption>Café entrance: Harris candidates versus ANMS, right reference.</figcaption></figure></details><h3>Building and outdoor patio</h3><figure><a class="image-link" href="images/partb/mosaic2_left_corners.png" target="_blank" rel="noopener"><img src="images/partb/mosaic2_left_corners.png" alt="Building and outdoor patio: Harris candidates versus 500 ANMS corners, left source." width="1389" height="563" loading="lazy"></a><figcaption>Building and outdoor patio: Harris candidates versus 500 ANMS corners, left source.</figcaption></figure><details><summary>Show the right-reference corner comparison</summary><figure><a class="image-link" href="images/partb/mosaic2_right_corners.png" target="_blank" rel="noopener"><img src="images/partb/mosaic2_right_corners.png" alt="Building and outdoor patio: Harris candidates versus ANMS, right reference." width="1389" height="563" loading="lazy"></a><figcaption>Building and outdoor patio: Harris candidates versus ANMS, right reference.</figcaption></figure></details><h3>Indoor stairwell and framed artwork</h3><figure><a class="image-link" href="images/partb/mosaic3_left_corners.png" target="_blank" rel="noopener"><img src="images/partb/mosaic3_left_corners.png" alt="Indoor stairwell and framed artwork: Harris candidates versus 500 ANMS corners, left source." width="1389" height="563" loading="lazy"></a><figcaption>Indoor stairwell and framed artwork: Harris candidates versus 500 ANMS corners, left source.</figcaption></figure><details><summary>Show the right-reference corner comparison</summary><figure><a class="image-link" href="images/partb/mosaic3_right_corners.png" target="_blank" rel="noopener"><img src="images/partb/mosaic3_right_corners.png" alt="Indoor stairwell and framed artwork: Harris candidates versus ANMS, right reference." width="1389" height="563" loading="lazy"></a><figcaption>Indoor stairwell and framed artwork: Harris candidates versus ANMS, right reference.</figcaption></figure></details><details><summary>Inspect Harris detection and ANMS implementation</summary><pre><code>def grayscale(rgb):
+    return rgb @ np.array([0.2126, 0.7152, 0.0722])
+
+def harris_candidates(gray, border=24):
+    smooth = gaussian_filter(gray, 1.0)
+    ix, iy = sobel(smooth, axis=1)/8., sobel(smooth, axis=0)/8.
+    xx, yy, xy = [gaussian_filter(v, 1.5) for v in (ix*ix, iy*iy, ix*iy)]
+    response = xx*yy - xy*xy - 0.04*(xx+yy)**2
+    if response.max() &lt;= 0:
+        raise ValueError(&#x27;No positive Harris responses.&#x27;)
+    keep = (response == maximum_filter(response, size=3)) &amp; (response &gt; .0001*response.max())
+    keep[:border] = False; keep[-border:] = False
+    keep[:, :border] = False; keep[:, -border:] = False
+    y, x = np.nonzero(keep)
+    points = np.column_stack([x,y]).astype(float)
+    scores = response[y,x]
+    order = np.argsort(-scores, kind=&#x27;stable&#x27;)
+    return points[order], scores[order], response
+
+def anms(points, scores, count=N_FEATURES, robust=ANMS_C):
+    radii2 = np.full(len(points), np.inf)
+    for start in range(0, len(points), 256):
+        stop = min(start+256, len(points))
+        d2 = cdist(points[start:stop], points, metric=&#x27;sqeuclidean&#x27;)
+        stronger = scores[start:stop, None] &lt; robust*scores[None, :]
+        d2[~stronger] = np.inf
+        radii2[start:stop] = d2.min(axis=1)
+    chosen = np.lexsort((-scores, -radii2))[:count]
+    return chosen, np.sqrt(radii2)
+
+features = {}
+for name, rgb in images.items():
+    gray = grayscale(rgb)
+    pts, scores, response = harris_candidates(gray)
+    if len(pts) &lt; 4:
+        raise ValueError(f&#x27;{name}: too few corners.&#x27;)
+    selected, radii = anms(pts, scores)
+    features[name] = {&#x27;gray&#x27;:gray, &#x27;points&#x27;:pts[selected], &#x27;candidate_count&#x27;:len(pts)}
+    fig, axes = plt.subplots(1,2, figsize=(14,7))
+    for ax, p, title in zip(axes, [pts, pts[selected]],
+                           [f&#x27;Harris: {len(pts)} corners&#x27;, f&#x27;ANMS: {len(selected)} corners&#x27;]):
+        ax.imshow(rgb); ax.scatter(p[:,0], p[:,1], s=7, c=&#x27;yellow&#x27;, linewidths=0)
+        ax.set_title(title); ax.axis(&#x27;off&#x27;)
+    fig.suptitle(name); fig.tight_layout()
+    fig.savefig(OUTPUT_DIR/(Path(name).stem+&#x27;_corners.png&#x27;), dpi=140)
+    plt.show(); plt.close(fig)
+</code></pre></details></section><section class="section part-b" id="b2"><div class="section-heading"><div class="eyebrow">B.2 · Feature descriptors</div><h2>A small patch with a larger view</h2></div><p>For each retained corner, I sample an axis-aligned 40 × 40 support window into an 8 × 8 descriptor. I blur the grayscale image with σ = 2 before sampling at 5-pixel spacing. The eight sampling offsets per axis run from −17.5 to +17.5 pixels, the centers of eight 5-pixel bins. This gives a coarse description of the larger neighborhood rather than an unblurred 8 × 8 crop.</p>
+<p>I flatten each patch into 64 values, subtract its mean, and divide by its standard deviation. Patches with a standard deviation at most $10^{-6}$ are discarded. The normalized vector has approximately zero mean and unit standard deviation.</p><div class="math-box">$$d=\frac{p-\operatorname{mean}(p)}{\operatorname{std}(p)}$$</div>
+<p>This bias/gain normalization reduces sensitivity to additive brightness and positive contrast scaling. The baseline does not include rotation invariance, multiscale processing, or a wavelet transform. Each panel below shows twelve actual normalized descriptors with their feature coordinates.</p><figure><a class="image-link" href="images/partb/mosaic1_left_descriptors.png" target="_blank" rel="noopener"><img src="images/partb/mosaic1_left_descriptors.png" alt="Café entrance: twelve normalized 8 × 8 descriptors from the left image." width="1155" height="396" loading="lazy"></a><figcaption>Café entrance: twelve normalized 8 × 8 descriptors from the left image.</figcaption></figure><figure><a class="image-link" href="images/partb/mosaic2_left_descriptors.png" target="_blank" rel="noopener"><img src="images/partb/mosaic2_left_descriptors.png" alt="Building and outdoor patio: twelve normalized 8 × 8 descriptors from the left image." width="1155" height="396" loading="lazy"></a><figcaption>Building and outdoor patio: twelve normalized 8 × 8 descriptors from the left image.</figcaption></figure><figure><a class="image-link" href="images/partb/mosaic3_left_descriptors.png" target="_blank" rel="noopener"><img src="images/partb/mosaic3_left_descriptors.png" alt="Indoor stairwell and framed artwork: twelve normalized 8 × 8 descriptors from the left image." width="1155" height="396" loading="lazy"></a><figcaption>Indoor stairwell and framed artwork: twelve normalized 8 × 8 descriptors from the left image.</figcaption></figure><details><summary>Inspect descriptor extraction and normalization</summary><pre><code>def extract_descriptors(gray, points):
+    blurred = gaussian_filter(gray, 2.0)
+    offsets = np.arange(8)*5 - 17.5  # centers of eight 5-pixel bins in a 40-pixel window
+    dx, dy = np.meshgrid(offsets, offsets)
+    x = points[:,0,None,None] + dx
+    y = points[:,1,None,None] + dy
+    patches = map_coordinates(blurred, [y.ravel(),x.ravel()], order=1, mode=&#x27;reflect&#x27;).reshape(-1,8,8)
+    vectors = patches.reshape(-1,64)
+    std = vectors.std(axis=1)
+    keep = std &gt; 1e-6
+    normalized = (vectors[keep]-vectors[keep].mean(axis=1,keepdims=True))/std[keep,None]
+    return points[keep], normalized
+
+for name, f in features.items():
+    f[&#x27;points&#x27;], f[&#x27;descriptors&#x27;] = extract_descriptors(f[&#x27;gray&#x27;], f[&#x27;points&#x27;])
+    fig, axes = plt.subplots(2,6, figsize=(12,4))
+    for ax in axes.ravel(): ax.axis(&#x27;off&#x27;)
+    for ax, desc, point in zip(axes.ravel(), f[&#x27;descriptors&#x27;][:12], f[&#x27;points&#x27;][:12]):
+        ax.imshow(desc.reshape(8,8), cmap=&#x27;gray&#x27;, vmin=-2, vmax=2, interpolation=&#x27;nearest&#x27;)
+        ax.set_title(f&#x27;({point[0]:.0f}, {point[1]:.0f})&#x27;, fontsize=9)
+    fig.suptitle(name+&#x27;: normalized 8×8 descriptors&#x27;); fig.tight_layout()
+    fig.savefig(OUTPUT_DIR/(Path(name).stem+&#x27;_descriptors.png&#x27;), dpi=140)
+    plt.show(); plt.close(fig)
+</code></pre></details></section><section class="section part-b" id="b3"><div class="section-heading"><div class="eyebrow">B.3 · Feature matching</div><h2>Finding distinctive correspondences</h2></div><p>I compute the squared Euclidean distance (SSD) between normalized descriptors. For each left-image descriptor, I find its nearest and second-nearest neighbors in the right image and accept it only when:</p><div class="math-box">$$\frac{\mathrm{SSD}_{\mathrm{best}}}{\mathrm{SSD}_{\mathrm{second}}}<0.5$$</div>
+<p>This is a squared-distance ratio: the equivalent Euclidean-distance ratio threshold is √0.5 ≈ 0.707. I reject ambiguous cases with zero second-neighbor distance. I also require mutual nearest neighbors, so the right descriptor must select the original left descriptor as its closest match.</p>
+<p>The ratio test rejects matches that have similarly plausible alternatives; mutual matching further reduces many-to-one assignments. Neither guarantees geometric consistency, so RANSAC follows. The plots show at most 80 evenly sampled accepted matches for readability; all accepted matches are passed to RANSAC.</p><figure><a class="image-link" href="images/partb/mosaic1_matches.png" target="_blank" rel="noopener"><img src="images/partb/mosaic1_matches.png" alt="Café entrance: 121 accepted matches before RANSAC; up to 80 displayed." width="1589" height="483" loading="lazy"></a><figcaption>Café entrance: 121 accepted matches before RANSAC; up to 80 displayed.</figcaption></figure><figure><a class="image-link" href="images/partb/mosaic2_matches.png" target="_blank" rel="noopener"><img src="images/partb/mosaic2_matches.png" alt="Building and outdoor patio: 237 accepted matches before RANSAC; up to 80 displayed." width="1589" height="483" loading="lazy"></a><figcaption>Building and outdoor patio: 237 accepted matches before RANSAC; up to 80 displayed.</figcaption></figure><figure><a class="image-link" href="images/partb/mosaic3_matches.png" target="_blank" rel="noopener"><img src="images/partb/mosaic3_matches.png" alt="Indoor stairwell and framed artwork: 182 accepted matches before RANSAC; up to 80 displayed." width="1589" height="483" loading="lazy"></a><figcaption>Indoor stairwell and framed artwork: 182 accepted matches before RANSAC; up to 80 displayed.</figcaption></figure><details><summary>Inspect the ratio test and mutual matching</summary><pre><code>def match_descriptors(a, b, threshold=SSD_RATIO):
+    if len(a)&lt;2 or len(b)&lt;2:
+        raise ValueError(&#x27;Need at least two descriptors in both images.&#x27;)
+    distances = cdist(a, b, metric=&#x27;sqeuclidean&#x27;)
+    nearest_two = np.argsort(distances, axis=1)[:,:2]
+    rows = np.arange(len(a)); first, second = nearest_two.T
+    d1, d2 = distances[rows,first], distances[rows,second]
+    ratio = np.divide(d1,d2,out=np.full_like(d1,np.inf),where=d2&gt;1e-12)
+    mutual = np.argmin(distances,axis=0)[first] == rows
+    good = (ratio &lt; threshold) &amp; mutual
+    return np.column_stack([rows[good],first[good]]), ratio[good]
+
+def plot_matches(left, right, p, q, title, filename, inliers=None):
+    h = max(len(left),len(right)); offset = left.shape[1]
+    canvas = np.zeros((h,offset+right.shape[1],3))
+    canvas[:len(left),:offset] = left; canvas[:len(right),offset:] = right
+    fig, ax = plt.subplots(figsize=(16,7)); ax.imshow(canvas)
+    chosen = np.linspace(0,len(p)-1,min(80,len(p)),dtype=int)
+    for i in chosen:
+        color = (&#x27;lime&#x27; if inliers[i] else &#x27;red&#x27;) if inliers is not None else plt.cm.hsv(i/max(1,len(p)))
+        ax.plot([p[i,0],q[i,0]+offset],[p[i,1],q[i,1]],&#x27;-o&#x27;,color=color,ms=3,lw=.6,alpha=.8)
+    ax.set_title(title); ax.axis(&#x27;off&#x27;); fig.tight_layout()
+    fig.savefig(OUTPUT_DIR/filename,dpi=140); plt.show(); plt.close(fig)
+
+pair_matches = {}
+for label,(ln,rn) in MOSAIC_PAIRS.items():
+    pairs, ratios = match_descriptors(features[ln][&#x27;descriptors&#x27;],features[rn][&#x27;descriptors&#x27;])
+    p, q = features[ln][&#x27;points&#x27;][pairs[:,0]], features[rn][&#x27;points&#x27;][pairs[:,1]]
+    pair_matches[label] = (p,q)
+    print(label, len(p), &#x27;accepted matches&#x27;)
+    plot_matches(images[ln],images[rn],p,q,f&#x27;{label}: {len(p)} ratio + mutual matches&#x27;,label+&#x27;_matches.png&#x27;)
+</code></pre></details></section><section class="section part-b" id="b4"><div class="section-heading"><div class="eyebrow">B.4 · Robust homographies &amp; mosaics</div><h2>Automatic alignment, three scenes</h2></div><p>I implement four-point RANSAC from scratch. Each trial samples four distinct matches and rejects samples containing a nearly collinear triple in either image. I estimate a normalized least-squares homography mapping left → right, project all matched source points, and classify errors below 3 working-image pixels as inliers.</p>
+<p>The best model maximizes inlier count, breaking ties by median error. The adaptive trial budget targets 99.9% success under the usual sampling assumptions and is bounded by 100–10,000 trials. All three runs used 100 trials. Seed 180 makes sampling repeatable. I refit on the best consensus and reclassify it for up to ten iterations, then recompute the returned inlier mask and errors.</p>
+<p>The notebook includes a synthetic test with known ground-truth geometry and injected outliers. No library homography estimator or RANSAC routine is called.</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Scene</th><th scope="col">Matches</th><th scope="col">Inliers</th><th scope="col">Inlier share</th><th scope="col">Median error (px)</th><th scope="col">RMSE (px)</th></tr></thead><tbody><tr><th scope="row">Café entrance</th><td>121</td><td>111</td><td>91.7%</td><td>0.886</td><td>1.058</td></tr><tr><th scope="row">Building and outdoor patio</th><td>237</td><td>218</td><td>92.0%</td><td>1.382</td><td>1.558</td></tr><tr><th scope="row">Indoor stairwell and framed artwork</th><td>182</td><td>172</td><td>94.5%</td><td>0.972</td><td>1.220</td></tr></tbody></table></div>
+<p class="note">These errors are measured on each model’s accepted automatic matches. Part A’s errors use different, manually selected points, so comparing the two RMSE values directly would not establish which panorama is more accurate.</p>
+<h3>Warping and blending</h3><p>I reuse Part A’s inverse warp, bilinear interpolation, validity masks and normalized feather weights. The three comparisons below show the final manual feathered mosaic beside the automatic feathered mosaic. Each uses its own valid canvas bounds, so these are side-by-side figures rather than pixel-aligned sliders.</p><article id="automatic-mosaic-1"><h3>Mosaic 1: Café entrance</h3><figure><a class="image-link" href="images/partb/mosaic1_manual_vs_auto.png" target="_blank" rel="noopener"><img src="images/partb/mosaic1_manual_vs_auto.png" alt="Café entrance: manual feathered mosaic (left) and automatic feathered mosaic (right)." width="1790" height="502" loading="lazy"></a><figcaption>Café entrance: manual feathered mosaic (left) and automatic feathered mosaic (right).</figcaption></figure><p class="links"><a href="images/mosaic1_final.png" target="_blank" rel="noopener">Open manual mosaic</a> · <a href="images/partb/mosaic1_automatic.png" target="_blank" rel="noopener">Open automatic mosaic</a> · <a href="data/partb/mosaic1_H.txt">Download automatic H</a></p><div class="observation"><span class="mini-label">Comparison</span><p>The automatic mosaic reconstructs the café and neighboring entrance with a slightly different canvas. The window bars look more coherent in the overview, but the “Suite 2” lettering is still soft or doubled in the overlap. A good fit to accepted features does not ensure perfect alignment on every surface.</p></div><details><summary>Inspect RANSAC inliers and rejected matches</summary><figure><a class="image-link" href="images/partb/mosaic1_ransac.png" target="_blank" rel="noopener"><img src="images/partb/mosaic1_ransac.png" alt="Café entrance: green lines are inliers; red lines are rejected matches. Up to 80 displayed." width="1589" height="483" loading="lazy"></a><figcaption>Café entrance: green lines are inliers; red lines are rejected matches. Up to 80 displayed.</figcaption></figure></details></article><article id="automatic-mosaic-2"><h3>Mosaic 2: Building and outdoor patio</h3><figure><a class="image-link" href="images/partb/mosaic2_manual_vs_auto.png" target="_blank" rel="noopener"><img src="images/partb/mosaic2_manual_vs_auto.png" alt="Building and outdoor patio: manual feathered mosaic (left) and automatic feathered mosaic (right)." width="1790" height="507" loading="lazy"></a><figcaption>Building and outdoor patio: manual feathered mosaic (left) and automatic feathered mosaic (right).</figcaption></figure><p class="links"><a href="images/mosaic2_final.png" target="_blank" rel="noopener">Open manual mosaic</a> · <a href="images/partb/mosaic2_automatic.png" target="_blank" rel="noopener">Open automatic mosaic</a> · <a href="data/partb/mosaic2_H.txt">Download automatic H</a></p><div class="observation"><span class="mini-label">Comparison</span><p>The automatic result preserves the building, banner, fence and plants. In the overview, the banner and fence appear more coherent than in the manual blend, but fine details still contain softness and the lighting remains uneven. The homography changes the canvas outline while keeping the right image as reference.</p></div><details><summary>Inspect RANSAC inliers and rejected matches</summary><figure><a class="image-link" href="images/partb/mosaic2_ransac.png" target="_blank" rel="noopener"><img src="images/partb/mosaic2_ransac.png" alt="Building and outdoor patio: green lines are inliers; red lines are rejected matches. Up to 80 displayed." width="1589" height="483" loading="lazy"></a><figcaption>Building and outdoor patio: green lines are inliers; red lines are rejected matches. Up to 80 displayed.</figcaption></figure></details></article><article id="automatic-mosaic-3"><h3>Mosaic 3: Indoor stairwell and framed artwork</h3><figure><a class="image-link" href="images/partb/mosaic3_manual_vs_auto.png" target="_blank" rel="noopener"><img src="images/partb/mosaic3_manual_vs_auto.png" alt="Indoor stairwell and framed artwork: manual feathered mosaic (left) and automatic feathered mosaic (right)." width="1790" height="519" loading="lazy"></a><figcaption>Indoor stairwell and framed artwork: manual feathered mosaic (left) and automatic feathered mosaic (right).</figcaption></figure><p class="links"><a href="images/mosaic3_final.png" target="_blank" rel="noopener">Open manual mosaic</a> · <a href="images/partb/mosaic3_automatic.png" target="_blank" rel="noopener">Open automatic mosaic</a> · <a href="data/partb/mosaic3_H.txt">Download automatic H</a></p><div class="observation"><span class="mini-label">Comparison</span><p>Both versions reconstruct the stairwell landing and framed artwork. The automatic estimate shifts the artwork and ceiling alignment slightly. Fine frame and artwork details remain somewhat soft; reflections in the glass can also change between views and are not all stitching artifacts.</p></div><details><summary>Inspect RANSAC inliers and rejected matches</summary><figure><a class="image-link" href="images/partb/mosaic3_ransac.png" target="_blank" rel="noopener"><img src="images/partb/mosaic3_ransac.png" alt="Indoor stairwell and framed artwork: green lines are inliers; red lines are rejected matches. Up to 80 displayed." width="1589" height="483" loading="lazy"></a><figcaption>Indoor stairwell and framed artwork: green lines are inliers; red lines are rejected matches. Up to 80 displayed.</figcaption></figure></details></article><details><summary>Inspect four-point RANSAC and its synthetic test</summary><pre><code>from itertools import combinations
+
+def nondegenerate_four(points):
+    scale = max(float(np.ptp(points,axis=0).max()),1.)
+    for i,j,k in combinations(range(4),3):
+        u,v = points[j]-points[i],points[k]-points[i]
+        if abs(u[0]*v[1]-u[1]*v[0]) &lt; 1e-4*scale*scale:
+            return False
+    return True
+
+def reprojection_errors(p,q,H):
+    z = np.column_stack([p,np.ones(len(p))]) @ H.T
+    good = np.isfinite(z).all(axis=1) &amp; (np.abs(z[:,2])&gt;1e-10)
+    errors = np.full(len(p),np.inf)
+    errors[good] = np.linalg.norm(z[good,:2]/z[good,2,None]-q[good],axis=1)
+    return errors
+
+def ransac_homography(p,q,threshold=RANSAC_PX,max_iters=RANSAC_MAX_ITERS,seed=SEED):
+    if len(p)&lt;4: raise ValueError(f&#x27;Only {len(p)} matches: need at least four.&#x27;)
+    rng=np.random.default_rng(seed); best=None; best_key=(-1,-np.inf)
+    budget=max_iters; trials=0
+    while trials &lt; budget:
+        trials+=1; idx=rng.choice(len(p),4,replace=False)
+        if not nondegenerate_four(p[idx]) or not nondegenerate_four(q[idx]): continue
+        try: H=computeH(p[idx],q[idx])
+        except (ValueError,np.linalg.LinAlgError): continue
+        errors=reprojection_errors(p,q,H); mask=errors&lt;threshold
+        count=int(mask.sum())
+        if count&lt;4: continue
+        key=(count,-float(np.median(errors[mask])))
+        if key&gt;best_key:
+            best_key=key; best=(H,mask)
+            success=(count/len(p))**4
+            needed=1 if success&gt;=1 else int(np.ceil(np.log(.001)/np.log1p(-success)))
+            budget=min(budget,max(100,needed))
+    if best is None: raise ValueError(&#x27;RANSAC found no nondegenerate consensus.&#x27;)
+    H,mask=best
+    for _ in range(10):
+        try: refined=computeH(p[mask],q[mask])
+        except (ValueError,np.linalg.LinAlgError): break
+        errors=reprojection_errors(p,q,refined); new=errors&lt;threshold
+        if new.sum()&lt;4: break
+        H=refined
+        if np.array_equal(mask,new): break
+        mask=new
+    errors=reprojection_errors(p,q,H); mask=errors&lt;threshold
+    return H,mask,errors,trials
+
+# Numerical test includes outliers; no library RANSAC or homography estimator is used.
+rng=np.random.default_rng(99)
+p_test=rng.uniform(0,500,(100,2))
+H_test=np.array([[1.02,.03,40],[-.02,.98,15],[.0001,-.0002,1.]])
+q_test=transform_points(p_test,H_test)+rng.normal(0,.15,(100,2))
+q_test[70:]=rng.uniform(0,500,(30,2))
+H_fit,mask_test,err_test,_=ransac_homography(p_test,q_test)
+assert mask_test[:70].sum()&gt;=68 and mask_test[70:].sum()&lt;=2
+assert np.median(np.linalg.norm(transform_points(p_test[:70],H_fit)-transform_points(p_test[:70],H_test),axis=1))&lt;.5
+print(&#x27;Synthetic homography + outlier rejection test passed.&#x27;)
+
+models={}; diagnostics={}
+for label,(ln,rn) in MOSAIC_PAIRS.items():
+    p,q=pair_matches[label]
+    H,mask,errors,trials=ransac_homography(p,q)
+    checked_corners(images[ln],H)
+    models[label]=H
+    diagnostics[label]={&#x27;matches&#x27;:len(p),&#x27;inliers&#x27;:int(mask.sum()),&#x27;inlier_fraction&#x27;:float(mask.mean()),
+        &#x27;median_error_px&#x27;:float(np.median(errors[mask])),
+        &#x27;rmse_px&#x27;:float(np.sqrt(np.mean(errors[mask]**2))),&#x27;trials&#x27;:trials,&#x27;H&#x27;:H.tolist()}
+    print(label,diagnostics[label])
+    np.savez(OUTPUT_DIR/(label+&#x27;_geometry.npz&#x27;),H=H,source=p,destination=q,inliers=mask,errors=errors)
+    plot_matches(images[ln],images[rn],p,q,label+&#x27;: RANSAC (green=inlier, red=outlier)&#x27;,label+&#x27;_ransac.png&#x27;,mask)
+</code></pre></details></section><section class="section part-b" id="b-takeaways"><div class="section-heading"><div class="eyebrow">Part B · Reflection</div><h2>Alignment and blending solve different problems</h2></div><p>Automatic matching replaces the manual correspondence selection with a reproducible pipeline. Harris finds local structure; ANMS improves feature coverage; blurred normalized descriptors summarize local appearance; the ratio test rejects ambiguous matches; and RANSAC filters matches by geometric agreement.</p><p>There are still visible limitations. The descriptors are single-scale and axis-aligned, while the photographs contain perspective changes, repeated structures, reflections and surfaces at different depths. One homography can align a dominant surface without aligning everything else. Feathering makes transitions less abrupt, but cannot correct displaced edges.</p><p>The café has the fewest accepted matches (121), while the patio has the most (237). All three pairs retain more than 90% of their accepted matches after RANSAC in this run. Those counts show strong geometric agreement among selected features, not a guarantee of perfect visual alignment.</p><footer><span>Kelvin Lim · CS 180 · Project 4A &amp; 4B</span><p>Photographs and results from my project experiments. <a href="#top">Back to top ↑</a></p></footer></main><script src="script.js"></script></body></html>
